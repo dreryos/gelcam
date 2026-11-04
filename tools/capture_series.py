@@ -1,10 +1,13 @@
-"""Pořídí sérii RAW snímků pro kalibraci (darky, bias) přes EdsdkCamera.
+"""Pořídí sérii RAW snímků pro kalibraci přes EdsdkCamera.
 
     uv run python tools/capture_series.py dark --tv 8 --tv 30 --n 16
     uv run python tools/capture_series.py bias --n 16
+    uv run python tools/capture_series.py flat --tv 1/60 --n 16 --name bile
+    uv run python tools/capture_series.py ladder --tv 1/4000 --tv 1/2000 ... --n 2
 
-Podmínky: světla zhasnutá, skříň zavřená, okulár zakrytý. První snímek každé
-série se zkontroluje na světelný únik; při úniku se série zastaví.
+dark, bias: světla zhasnutá, skříň zavřená, okulár zakrytý; první snímek se
+zkontroluje na světelný únik. flat, ladder: rozsvícená rovnoměrná plocha,
+`ladder` je řada časů (linearita, saturace, zisk), `flat` jeden čas.
 Výstup: testdata/calib/<den>_<druh>_<čas>_iso<ISO>/ s CR2 a metadata.json.
 Nastavení foťáku (ISO, čas, clona) se po skončení vrátí na původní hodnoty.
 """
@@ -50,7 +53,7 @@ def stats(path: Path) -> dict:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("kind", choices=["dark", "bias"])
+    ap.add_argument("kind", choices=["dark", "bias", "flat", "ladder"])
     ap.add_argument("--tv", action="append", default=[], help='čas, např. 8 nebo 30 (v s); u bias se ignoruje')
     ap.add_argument("--n", type=int, default=16)
     ap.add_argument("--iso", type=int, default=100)
@@ -90,6 +93,17 @@ def main() -> int:
                     raise SystemExit(f"{dest} už existuje, nepřepisuji.")
                 tmp.rename(dest)
                 files.append(dest.name)
+                if args.kind in ("flat", "ladder"):
+                    f = read_raw(dest)
+                    sat = float((f.mosaic >= f.white_level).mean())
+                    g = select_channel(f, "G") - f.black_level("G")
+                    h, w = g.shape
+                    centre = float(g[h // 3:2 * h // 3, w // 3:2 * w // 3].mean())
+                    corner = float(np.mean([g[:h // 8, :w // 8].mean(), g[:h // 8, -w // 8:].mean(),
+                                            g[-h // 8:, :w // 8].mean(), g[-h // 8:, -w // 8:].mean()]))
+                    print(f"  {i:2d}/{args.n} {dest.name} G střed {centre:8.1f} ADU, rohy/střed {corner / centre:.2f}, "
+                          f"saturováno {sat * 100:.2f} % ({durations[-1]:.1f} s)")
+                    continue
                 if i == 1:
                     st = stats(dest)
                     print(f"  1. snímek: průměr nad black levelem R {st['R']['mean']:.2f}, G {st['G']['mean']:.2f}, "
@@ -110,7 +124,8 @@ def main() -> int:
                 "n": args.n, "files": files, "started": datetime.now().isoformat(timespec="seconds"),
                 "capture_durations_s": [round(d, 2) for d in durations],
                 "first_frame_stats_adu": stats(out / files[0]),
-                "note": "dark/bias: světla zhasnutá, skříň zavřená, okulár zakrytý",
+                "note": ("dark/bias: světla zhasnutá, skříň zavřená, okulár zakrytý" if args.kind in ("dark", "bias")
+                         else "rozsvícená rovnoměrná plocha; zoom a ostření beze změny"),
             }
             (out / "metadata.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
         code = 0

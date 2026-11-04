@@ -355,7 +355,7 @@ Celkem zhruba 4–6 týdnů soustředěné práce; odhady jsou orientační.
 
 - **Hotovo:** `processing/raw_io.py` (`RawFrame`, `read_raw`: CR2 přes rawpy bez demozaikování, soubor se nemění) a `processing/channel.py` (`select_channel` R/G/B bez interpolace, G = průměr dvou G pixelů v buňce 2×2, výstup poloviční rozlišení; `saturation_mask`). Testy: syntetická mozaika (přesné pixely, jiná fáze CFA, lichý rozměr, nezměněný vstup) a skutečný CR2 z 100D. `rawpy`, `tifffile` a `opencv-python-headless` jsou teď běžné závislosti.
 - **Poznatky o CR2 ze 100D (IMG_0001.CR2):** viditelná plocha **5208 × 3476** (ne 5184 × 3456, to je jen výřez `crop_*`), vzor `RGBG` s vlevo nahoře R (`raw_pattern` [[0,1],[3,2]]), black level 2048/2048/2048/2047, kanál R/G po výběru 2604 × 1738.
-- **Saturace:** LibRaw hlásí `white_level` = **13 583**, ale skutečné ořezání signálu je na **~15 304** (R a G mají stovky tisíc pixelů přesně na této hodnotě, B ji nedosáhl). Maska přepalů proto používá konzervativní `white_level` z RAW; pixely mezi 13 583 a 15 304 se tedy označí jako saturované, i když jsou ještě na hraně. Rozhodnout při kalibraci, jestli není lepší hranice odvozená z dat (např. 15 300).
+- **Saturace:** LibRaw hlásí `white_level` = **13 583** a **při ISO 100 sedí přesně** (viz řada časů níže: stovky tisíc pixelů přesně na 13 583). IMG_0001.CR2 byl pořízen při ISO 800, kde je skutečné ořezání vyšší (**~15 304**); hranice saturace tedy **závisí na ISO**. Maska přepalů proto používá `white_level` z hlavičky daného snímku, ne pevné číslo; pixely mírně nad hranicí (hot pixely, šum) se taky berou jako saturované.
 - **Zbývá z etapy 2:** `calib` (master dark – medián, master flat se `D_F`), `align` (fázová korelace), `stack` (sigma clipping), `binning`, `export` (16bit TIFF, preview, metadata), `pipeline` s historií kroků a testy: zisk SNR ≈ √N, linearita, hot pixely po darku, vinětace po flatu.
 
 ### Naměřené darky a bias (4. 11. 2026, 100D, ISO 100, f/8)
@@ -374,6 +374,18 @@ Pořízeno nástrojem `tools/capture_series.py` (jen hodnoty z `allowed_values`,
 - **Žádný vzrůst průměrného temného proudu a žádný amp glow:** průměr po 30 s se neliší od biasu. Pozadí je rovnoměrné.
 - **Horké pixely:** asi **120 pixelů** je silně horkých (> 100 ADU nad pozadím) už při 8 s a jejich počet se při 30 s nemění; počet „teplých" pixelů (> 20 ADU) ale roste s časem: 7 → 421 → 2228 (z 18,1 Mpx). Darky tedy musí mít **stejný čas jako světlé snímky**; bias jako náhrada darku nestačí.
 - **Důsledek pro pipeline:** master dark = medián 8–16 darků (šum po mediánu ~2,2 ADU), `D_F` pro flat lze brát z darku stejného času, jeden snímek šumu ~7,3 ADU je při slabém signálu hlavní zdroj chyby, takže stacking se vyplatí.
+
+### Naměřený flat a řada časů při bílém světle (4. 11. 2026, 100D, ISO 100, f/8)
+
+Bílé světlo přes pevný oranžový filtr, bílý matný papír přes celé pole, zoom i ostření beze změny. Pořízeno `tools/capture_series.py` (`flat`, `ladder`), `testdata/calib/` (necommituje se).
+
+- **Flat:** 16× 8 s, v centru R ≈ 8650 a G ≈ 4750 ADU nad černou (R ≈ 75 % rozsahu), 0 % saturace, kolísání jasu mezi snímky ±1 % bez trendu (lampa se nezahřívá). **Vinětace: rohy mají ~73–75 % jasu středu** (G), což je přesně to, co flat field opraví. Časy flatu a darků jsou shodné (8 s), takže pro něj máme `D_F`.
+- **Spektrum scény:** R : G : B ≈ 1 : 0,55 : 0,04 (bílé světlo přes oranžový filtr). Pro kanál B se nepočítá.
+- **Řada časů** (1/64 až 32 s skutečného času, 2 snímky na čas, 12 časů):
+  - **Saturace:** při ISO 100 je ořezání přesně na **13 583** (= `white_level`, 4,3 mil. pixelů na stejné hodnotě); R saturuje už při 16 s, G při 32 s. Několik pixelů je mírně nad hranicí (max 14 962).
+  - **Zisk:** photon transfer curve dává **≈ 2,2 e⁻/ADU** (R i G po přepočtu na dva G pixely; B je kvůli slabému signálu nespolehlivé). Čtecí šum **≈ 6,7 ADU (~15 e⁻)**, shoduje se s šumem z biasu (7,3 ADU).
+  - **Linearita:** signál je úměrný nominálnímu času v rozmezí **±6 %**, plynule vzrůstá s délkou času (rychlost 1004 → 1078 ADU/s pro R od 1/4 s do 8 s). Proložené měření (8 s, 1 s, 8 s, 1 s…) vyloučilo drift lampy i pořadí: poměr 8 s / 1 s vychází stabilně **8,4** místo 8,0. Příčinou je nejspíš skutečná délka závěrky vůči nominální (Canon uvádí časy po třetinách EV); **zdroj neověřen**. Pro pipeline to nevadí, protože světlé snímky, darky a flaty se vždy berou při **stejném čase**; porovnávat signál napříč různými časy ale nelze s přesností lepší než ~5 %.
+- **Zbývá:** UV flat a stacking na fluoreskující scéně (potřebuje fluoreskující předmět pod UV).
 
 ---
 
