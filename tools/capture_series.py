@@ -7,7 +7,7 @@
 
 dark, bias: světla zhasnutá, skříň zavřená, okulár zakrytý; první snímek se
 zkontroluje na světelný únik. flat, ladder: rozsvícená rovnoměrná plocha,
-`ladder` je řada časů (linearita, saturace, zisk), `flat` jeden čas.
+`ladder` je řada časů (linearita, saturace, zisk), `flat` jeden čas, `scene` nehybná scéna (stacking), `--note` do metadat.
 Výstup: testdata/calib/<den>_<druh>_<čas>_iso<ISO>/ s CR2 a metadata.json.
 Nastavení foťáku (ISO, čas, clona) se po skončení vrátí na původní hodnoty.
 """
@@ -53,11 +53,12 @@ def stats(path: Path) -> dict:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("kind", choices=["dark", "bias", "flat", "ladder"])
+    ap.add_argument("kind", choices=["dark", "bias", "flat", "ladder", "scene"])
     ap.add_argument("--tv", action="append", default=[], help='čas, např. 8 nebo 30 (v s); u bias se ignoruje')
     ap.add_argument("--n", type=int, default=16)
     ap.add_argument("--iso", type=int, default=100)
     ap.add_argument("--name", default="")
+    ap.add_argument("--note", default="", help="popis scény/osvětlení do metadat, např. 'UV 100 %%'")
     args = ap.parse_args()
 
     tv_labels = ['1/4000'] if args.kind == "bias" else [f'{t}"' if "/" not in t else t for t in args.tv]
@@ -93,7 +94,7 @@ def main() -> int:
                     raise SystemExit(f"{dest} už existuje, nepřepisuji.")
                 tmp.rename(dest)
                 files.append(dest.name)
-                if args.kind in ("flat", "ladder"):
+                if args.kind in ("flat", "ladder", "scene"):
                     f = read_raw(dest)
                     sat = float((f.mosaic >= f.white_level).mean())
                     g = select_channel(f, "G") - f.black_level("G")
@@ -125,7 +126,7 @@ def main() -> int:
                 "capture_durations_s": [round(d, 2) for d in durations],
                 "first_frame_stats_adu": stats(out / files[0]),
                 "note": ("dark/bias: světla zhasnutá, skříň zavřená, okulár zakrytý" if args.kind in ("dark", "bias")
-                         else "rozsvícená rovnoměrná plocha; zoom a ostření beze změny"),
+                         else "rozsvícená scéna; zoom a ostření beze změny") + (f" | {args.note}" if args.note else ""),
             }
             (out / "metadata.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
         code = 0

@@ -385,7 +385,17 @@ Bílé světlo přes pevný oranžový filtr, bílý matný papír přes celé p
   - **Saturace:** při ISO 100 je ořezání přesně na **13 583** (= `white_level`, 4,3 mil. pixelů na stejné hodnotě); R saturuje už při 16 s, G při 32 s. Několik pixelů je mírně nad hranicí (max 14 962).
   - **Zisk:** photon transfer curve dává **≈ 2,2 e⁻/ADU** (R i G po přepočtu na dva G pixely; B je kvůli slabému signálu nespolehlivé). Čtecí šum **≈ 6,7 ADU (~15 e⁻)**, shoduje se s šumem z biasu (7,3 ADU).
   - **Linearita:** signál je úměrný nominálnímu času v rozmezí **±6 %**, plynule vzrůstá s délkou času (rychlost 1004 → 1078 ADU/s pro R od 1/4 s do 8 s). Proložené měření (8 s, 1 s, 8 s, 1 s…) vyloučilo drift lampy i pořadí: poměr 8 s / 1 s vychází stabilně **8,4** místo 8,0. Příčinou je nejspíš skutečná délka závěrky vůči nominální (Canon uvádí časy po třetinách EV); **zdroj neověřen**. Pro pipeline to nevadí, protože světlé snímky, darky a flaty se vždy berou při **stejném čase**; porovnávat signál napříč různými časy ale nelze s přesností lepší než ~5 %.
-- **Zbývá:** UV flat a stacking na fluoreskující scéně (potřebuje fluoreskující předmět pod UV).
+- **Zbývá:** UV flat (rovnoměrně fluoreskující plocha) a stacking na fluoreskující scéně: scéna je nafocená, viz níže.
+
+### Fluoreskující scéna pod UV (4. 11. 2026, 100D, ISO 100, f/8)
+
+Náhrada gelu: tři čáry zvýrazňovače různé intenzity na bílém papíře pod UV, přes pevný oranžový filtr. Pořízeno `tools/capture_series.py scene` (16× 4 s), `testdata/calib/` (necommituje se). Papír, zoom i ostření beze změny mezi sadami.
+
+- **Signál:** čáry svítí v R i G, papír na pozadí slabě fluoreskuje (R ≈ 740 ADU u UV 100 %), kanál B je slabý. Při 4 s lehce saturuje nejsilnější čára (0,14 % pixelů při UV 100 %, 0,05 % při UV 70 %), při 8 s již 0,9 %.
+- **Úroveň UV:** signál při **UV 70 % = 0,80–0,81 signálu při UV 100 %**, a to stejně v čarách i na pozadí, v R i G. Úroveň UV je tedy čisté násobení signálu (bez změny tvaru nebo spektra). „70 %" odpovídá ~81 % světla. UV úroveň se i tak ukládá do metadat a flat se pořizuje pro používanou úroveň.
+- **Darky 4 s** (16×, pro obě sady scény): bez světelného úniku, šum v čase 7,3 ADU jako dříve. **Teplých pixelů (> 20 ADU) je ale 2035 a silně horkých (> 100 ADU) 116**, ačkoli dřív při dvojnásobném čase 8 s bylo jen 421 (resp. 121). Darky 8 s a 30 s se fotily na začátku dne s „studeným" čipem, tyto po ~1,5 h focení (dlouhé expozice, živý view, UV série). Temný proud horkých pixelů tedy **silně závisí na teplotě čipu**; darky je nutné pořizovat hned po světlých snímcích a ve stejném stavu foťáku, jak plán už požaduje (kap. 9, ohřev čipu). Odečet darku z jiného času nebo jiné teploty nebude u teplých pixelů přesný; teplota zatím není měřena (EDSDK ji u 100D nevrací).
+- **Důsledek pro testy:** pro odečet darku na scéně 4 s použít darky 4 s (stejný stav čipu), ne darky 8 s.
+- **Využití:** sady slouží k testu stackingu (zisk SNR ≈ √N), srovnání kanálů R a G a testu zarovnání. Nejde o skutečný gel, takže tvar pruhů a mez detekce se tím neověří.
 
 ---
 
