@@ -343,11 +343,11 @@ Celkem zhruba 4–6 týdnů soustředěné práce; odhady jsou orientační.
 ### Výsledky etapy 1b (4. 11. 2026, vrstva EDSDK, Canon EOS 100D)
 
 - **`Prop.IMAGE_QUALITY`:** čtení i nastavení jen z hodnot, které foťák vrátí (`EdsGetPropertyDesc`). 100D nabízí JPEG varianty, RAW+JPEG (0x640013) a RAW (0x64FF0F); M-RAW/S-RAW nenabízí. `ensure_raw_quality(camera)` vybere RAW bez JPEG v plné velikosti a `capture()` ji volá samo, takže obsluha nemusí hlídat menu foťáku. Ověřeno na foťáku: po přepnutí na JPEG se při focení vrátilo RAW. Při připojení se přidá upozornění, pokud foťák RAW neukládá.
-- **Obnovení spojení:** `EdsdkCamera.reconnect()` (zavře spojení, zkusí navázat nové a vrátí naposledy nastavené ISO, čas a clonu). Ověřeno rozumným voláním na připojeném foťáku; skutečné odpojení kabelu ani uspání foťáku zatím netestováno.
+- **Obnovení spojení:** `EdsdkCamera.reconnect()` (zavře spojení, zkouší navázat nové a vrátí naposledy nastavené ISO, čas a clonu). **Ověřeno na skutečném odpojení:** vytažení a zapojení kabelu USB i vypnutí/zapnutí foťáku (`tools/edsdk_reconnect_test.py`); ztráta spojení se pozná do ~2 s a spojení se obnoví za ~9 s od odpojení. Test odhalil chybu: po neúspěšném připojení zůstalo SDK inicializované a každý další pokus končil „Inicializace EDSDK: 0x2"; opraveno úklidem (`EdsTerminateSDK`) při selhání `_connect`. Uspání foťáku (auto power off) zatím netestováno.
 - **Blokující aplikace:** před připojením se hledají běžící EOS Utility, digiCamControl, qDslrDashboard, Lightroom, Capture One, N.I.N.A. (`edsdk/blockers.py`). Při chybě „foťák nenalezen/obsazen" se jejich jména přidají do zprávy, jinak jen do `warnings`.
 - **Už před tím implementováno a nyní ověřeno bez chyby na 100D:** lupa 5×/1×, `DoEvfAf` (autofokus), `DriveLensEvf` (kroky Near/Far), spoušť bez AF (`Completely_NonAF`), prodlužování časovače vypnutí (každých 60 s + při `WillSoonShutDown`). `edsdk_smoke.py --focus --capture`: 19/19 kroků.
 - **Ostření ověřeno (4. 11. 2026, druhý pokus, kontrastní scéna se srovnávacím hřebenem):** z výrazného rozostření dostal **AF** (`DoEvfAf`) obraz ostrý (míra ostrosti 5,5 → 53, vizuálně potvrzeno na uloženém snímku live view). Jednotlivé kroky `DriveLensEvf` Near3/Far3 mění ostrost plynule a malým dílem (míra 5,5–8,9 při 12 krocích), takže jsou vhodné jen na doladění, ne na hrubé nastavení; hrubě ostří AF. První pokus na prázdné scéně nic neukázal.
-- **Zbývá z 1b:** test reálného odpojení kabelu a uspání foťáku (`tools/edsdk_reconnect_test.py`), 500D.
+- **Zbývá z 1b:** test uspání foťáku (auto power off) a 500D.
 
 
 ---

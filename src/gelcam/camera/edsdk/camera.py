@@ -118,6 +118,26 @@ class EdsdkCamera:
     def _connect(self) -> CameraInfo:
         sdk = self._sdk = Edsdk(self._vendor_dir)
         check(sdk.EdsInitializeSDK(), "Inicializace EDSDK")
+        try:
+            return self._open(sdk)
+        except BaseException:
+            self._abort_connect()  # jinak zůstane SDK inicializované a další pokus selže (chyba 0x2)
+            raise
+
+    def _abort_connect(self) -> None:
+        sdk = self._sdk
+        assert sdk is not None
+        if self._connected:
+            sdk.EdsCloseSession(self._cam)
+        for ref in (self._cam, self._list):
+            if ref.value:
+                sdk.EdsRelease(ref)
+        self._cam, self._list = c_void_p(), c_void_p()
+        self._connected = False
+        self._live = False
+        sdk.EdsTerminateSDK()
+
+    def _open(self, sdk: Edsdk) -> CameraInfo:
         check(sdk.EdsGetCameraList(byref(self._list)), "Seznam foťáků")
         count = c_uint32()
         check(sdk.EdsGetChildCount(self._list, byref(count)), "Seznam foťáků")
