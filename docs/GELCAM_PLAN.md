@@ -308,7 +308,7 @@ Syntetický gel: pozadí + Gaussovské pruhy se známou intenzitou + Poissonův 
 
 Celkem zhruba 4–6 týdnů soustředěné práce; odhady jsou orientační.
 
-**Stav 4. 11. 2026:** přístup ke Canon EDSDK je schválený. Pořadí se proto mění: hned po přípravě jde **etapa 0 a 1b (ovládání foťáku)**, pipeline (etapa 2) běží souběžně nad testovacími daty. Kostra projektu, rozhraní `Camera`, `MockCamera`, vrstva EDSDK (`src/gelcam/camera/edsdk/`), diagnostický skript etapy 0 (`tools/edsdk_smoke.py`), kontrola konstant proti hlavičkám (`tools/check_edsdk_constants.py`) a základní okno jsou založené; čekají na první spuštění na Windows s foťákem.
+**Stav 4. 11. 2026 (etapa 0 bez snímání hotová, viz výsledky níže):** přístup ke Canon EDSDK je schválený. Pořadí se proto mění: hned po přípravě jde **etapa 0 a 1b (ovládání foťáku)**, pipeline (etapa 2) běží souběžně nad testovacími daty. Kostra projektu, rozhraní `Camera`, `MockCamera`, vrstva EDSDK (`src/gelcam/camera/edsdk/`), diagnostický skript etapy 0 (`tools/edsdk_smoke.py`), kontrola konstant proti hlavičkám (`tools/check_edsdk_constants.py`) a základní okno jsou založené; čekají na první spuštění na Windows s foťákem.
 
 | Etapa | Obsah | Hotovo, když | Odhad |
 | --- | --- | --- | --- |
@@ -329,6 +329,16 @@ Celkem zhruba 4–6 týdnů soustředěné práce; odhady jsou orientační.
 - 1 sada s úmyslně přepáleným markerem (test detekce saturace),
 - volitelně 1 sada s malým posunem gelu (test zarovnání),
 - zapsat si barvivo, filtr, čas, ISO, clonu, objektiv a vzdálenost.
+
+### Výsledky etapy 0 (4. 11. 2026, Windows 11, Canon EOS 100D)
+
+- **SDK:** Canon EDSDK **13.21.10** (EDSDKv132110W, vydáno 3. 3. 2026), použita 64bitová `EDSDK_64/Dll`. 100D není v poznámkách k vydání výslovně uvedena, přesto funguje.
+- `uv sync` a `uv run pytest`: 45 testů v pořádku.
+- `check_edsdk_constants.py`: 62 konstant zkontrolováno. **Opraveny 2 chybné kódy chyb:** `EDS_ERR_TAKE_PICTURE_NO_CARD_NG` 0x8D07 → **0x8D06**, `EDS_ERR_TAKE_PICTURE_CARD_PROTECT_NG` 0x8D0B → **0x8D08**. Hlášky „CHYBÍ" u `kEdsAccess_ReadWrite`, `kEdsFileCreateDisposition_CreateAlways`, `kEdsSaveTo_Both` jsou falešný poplach (implicitní hodnoty enumů, ověřeno ručně: 2, 1, 3).
+- `edsdk_smoke.py` bez `--capture`: **10/10 kroků**. Připojení OK (sériové č. (skryto)), čtení vlastností OK (baterie 80 %, režim M), povolené hodnoty se načetly (ISO 100–12800 + Auto, časy Bulb–1/4000, clony f/5.6–f/36), live view snímek 960×640 při ~16,5 fps, vypnutí live view OK.
+- Stav foťáku při testu: ISO 800, 8", f/8. Pro gely nastavovat ISO 100.
+- `edsdk_smoke.py --capture`: **11/11 kroků.** Vyfocení a stažení RAW (`IMG_0001.CR2`, ~24 MB) funguje. První pokus skončil JPEG, protože foťák měl v menu kvalitu JPEG: **aplikace zatím kvalitu obrazu nenastavuje** (chybí `Prop.IMAGE_QUALITY`), do etapy 1b doplnit čtení/nastavení ze seznamu povolených hodnot.
+- **Zbývá:** test na 500D, `Prop.IMAGE_QUALITY`.
 
 ---
 
