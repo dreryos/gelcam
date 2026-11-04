@@ -346,8 +346,8 @@ Celkem zhruba 4–6 týdnů soustředěné práce; odhady jsou orientační.
 - **Obnovení spojení:** `EdsdkCamera.reconnect()` (zavře spojení, zkusí navázat nové a vrátí naposledy nastavené ISO, čas a clonu). Ověřeno rozumným voláním na připojeném foťáku; skutečné odpojení kabelu ani uspání foťáku zatím netestováno.
 - **Blokující aplikace:** před připojením se hledají běžící EOS Utility, digiCamControl, qDslrDashboard, Lightroom, Capture One, N.I.N.A. (`edsdk/blockers.py`). Při chybě „foťák nenalezen/obsazen" se jejich jména přidají do zprávy, jinak jen do `warnings`.
 - **Už před tím implementováno a nyní ověřeno bez chyby na 100D:** lupa 5×/1×, `DoEvfAf` (autofokus), `DriveLensEvf` (kroky Near/Far), spoušť bez AF (`Completely_NonAF`), prodlužování časovače vypnutí (každých 60 s + při `WillSoonShutDown`). `edsdk_smoke.py --focus --capture`: 19/19 kroků.
-- **Neověřeno:** že AF a kroky ostření skutečně mění ostrost. Foťák ve skříni mířil na prázdnou scénu a míra ostrosti (rozptyl Laplaciánu) se skoro nehýbala (437 → 433 → 437 → 430), po AF klesla na 88, tedy bez kontrastního cíle nelze nic usuzovat. Zopakovat s gelem nebo markerem pod bílým světlem před dalším vývojem ostření (kap. 12).
-- **Zbývá z 1b:** test ostření na kontrastní scéně, test reálného odpojení kabelu a uspání foťáku, 500D.
+- **Ostření ověřeno (4. 11. 2026, druhý pokus, kontrastní scéna se srovnávacím hřebenem):** z výrazného rozostření dostal **AF** (`DoEvfAf`) obraz ostrý (míra ostrosti 5,5 → 53, vizuálně potvrzeno na uloženém snímku live view). Jednotlivé kroky `DriveLensEvf` Near3/Far3 mění ostrost plynule a malým dílem (míra 5,5–8,9 při 12 krocích), takže jsou vhodné jen na doladění, ne na hrubé nastavení; hrubě ostří AF. První pokus na prázdné scéně nic neukázal.
+- **Zbývá z 1b:** test reálného odpojení kabelu a uspání foťáku (`tools/edsdk_reconnect_test.py`), 500D.
 
 
 ---
