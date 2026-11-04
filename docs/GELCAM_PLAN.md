@@ -32,24 +32,60 @@ Laboratoř fotí agarózové gely z PCR zrcadlovkou **Canon EOS 100D** (pro test
 9. **Vývoj potřebuje** Windows PC a samotný foťák jen pro etapu 0 a integrační testy. EDSDK existuje i pro macOS, ale finální ověření musí proběhnout na Windows. Windows ve VM na Apple Silicon pro test SDK nepoužívat.
 10. **Nasazení bez administrátora:** ano – PyInstaller (onedir), vestavěný ovladač WPD/PTP, přibalený VC++ runtime, nastavení v `%APPDATA%`. Rizika: AppLocker/zásady IT, hláška SmartScreen.
 11. **Náhrada zrcadlovky** (do budoucna): monochromatická astro kamera je pro gely lepší (bez Bayerovy masky, chlazení, elektronická závěrka). Viz kapitola 12.
-12. **Ostření přes EDSDK:** jen v live view a relativně po krocích (`kEdsCameraCommand_DriveLensEvf`, Near/Far 1–3). Objektiv musí být v poloze AF, absolutní pozice nejde zjistit. Softwarový autofokus podle ostrosti je možný, ale až ve v2. Ve v1 ruční ostření s lupou.
+12. **Ostření přes EDSDK:** jen v live view a relativně po krocích (`kEdsCameraCommand_DriveLensEvf`, Near/Far 1–3). Objektiv musí být v poloze AF, absolutní pozice nejde zjistit. Původně plánováno až do v2.
 13. **Podobné projekty:** hotový ekvivalent neexistuje. Užitečné: **N.I.N.A.** (open source astro capture, Windows, nativní Canon/ZWO/QHY) + **Siril** (open source kalibrace a stacking). Python wrappery EDSDK: `edsdk-python` (Jiloc), `pyedsdk` (PyPI). Gelové projekty jsou hlavně hardwarové (Raspberry Pi, openIVIS) bez kalibrace a stackingu.
-14. **Nemusí se čekat na schválení EDSDK.** Pipeline, rozhraní kamery, MockCamera, GUI a průvodce jdou vyvíjet hned nad testovacími daty nafocenými přes digiCamControl.
+14. **Nemusí se čekat na schválení EDSDK.** Pipeline, rozhraní kamery, MockCamera, GUI a průvodce jdou vyvíjet hned nad testovacími daty. Windows je potřeba až pro EDSDK, balení a test nasazení.
+15. **Upřesněná sestava (4. 11.):** kovová skříň s foťákem shora, ostřicí kroužek nedosažitelný (ostření jen AF → softwarové ostření patří do v1), ručně měnitelný zoom, UV 70/100 % a bílé světlo, pevný oranžový filtr. Návod na testovací data: `docs/TESTOVACI_DATA.md`.
 
 ---
 
 ## 3. Hardware a prostředí
 
+### Skutečná sestava (upřesněno 4. 11. 2026)
+
+- **Kovová skříň** (temná komora), fotoaparát je **zanořený shora** objektivem dolů.
+- **Zoom** na objektivu jde ručně měnit, **ostřicí kroužek není dosažitelný** → ostří se výhradně autofokusem (z foťáku nebo z aplikace přes EDSDK).
+- **Osvětlení:** UV lampa se dvěma úrovněmi (**70 % a 100 %**) a **bílé světlo**, přepínatelné.
+- **Emisní filtr:** pevný **oranžový** filtr před objektivem.
+
+### Fotoaparát Canon EOS 100D – parametry důležité pro GelCam (ze specifikace Canon)
+
+| Parametr | Hodnota | Dopad |
+| --- | --- | --- |
+| Snímač | CMOS APS-C 22,3 × 14,9 mm, 18 Mpx, Bayer (primární barvy) | výběr kanálu z mozaiky |
+| RAW | 14bit CR2, 5184 × 3456 px | jeden kanál (R) = 2592 × 1728 px |
+| Časy | 30 s – 1/4000 s, Bulb | nad 30 s jen Bulb (v1 se mu vyhnout, raději víc snímků) |
+| ISO | 100–12800 (rozšíření H 25600) | pro gely ISO 100 |
+| Závěrka | štěrbinová s elektronickou první lamelou, tiché snímání | v live view méně otřesů |
+| Live view | Hybrid CMOS AF II, FlexiZone-Single, lupa 5×/10×, histogram, mřížka | ostření a kontrola z aplikace |
+| Rozhraní | USB 2.0 Hi-Speed (mini-USB) | stažení RAW ~1–2 s |
+| Napájení | LP-E12; síťová sada **ACK-E15** | v boxu vždy síťový adaptér |
+| Úspora energie | vypnutí po 30 s – 15 min | aplikace musí prodlužovat (EDSDK `ExtendShutDownTimer`) nebo nastavit nejdelší |
+| Hledáček | závěrka okuláru jen na řemenu | okulár míří ven ze skříně → přelepit/zakrýt (průnik světla při dlouhých expozicích) |
+
+### Prostředí
+
 | Prvek | Požadavek | Poznámka |
 | --- | --- | --- |
 | Fotoaparát | Canon EOS 100D, režim M, RAW (CR2) | 500D pro test kompatibility; mini-USB kabel |
-| Napájení | síťový adaptér místo baterie | live view a série baterii rychle vybijí |
+| Napájení | síťový adaptér ACK-E15 | live view a série baterii rychle vybijí |
 | Karta | karta ve foťáku, nebo v menu zapnout „Spoušť bez karty“ | jinak foťák odmítne exponovat |
-| Uchycení | pevný držák nebo stativ nad transiluminátorem | flat field platí jen při stejné geometrii |
-| Zatemnění | box nebo kryt | okolní světlo zvyšuje pozadí |
-| Emisní filtr | oranžový pro EtBr/GelRed, žlutý/jantarový pro SYBR | největší jednotlivé zlepšení |
-| PC | Windows 10/11 x64, USB 2.0+ | stažení jednoho RAW trvá kolem 1–2 s |
+| Uchycení | pevně ve skříni | flat field platí jen při stejné geometrii, zoomu a ostření |
+| Zatemnění | kovová skříň; zakrytý okulár | |
+| Emisní filtr | pevný oranžový | ideální pro EtBr/GelRed; pro SYBR (emise ~520 nm) ho oranžový filtr velkou část odřízne – ověřit na datech |
+| PC | Windows 10/11 x64, USB 2.0+ | |
 | SDK | Canon EDSDK (registrace v Canon Developer Programme, schválení trvá několik dní) | verze, která podporuje 100D (a ideálně i 500D) |
+
+### Důsledky sestavy pro aplikaci
+
+- **Ostření musí umět aplikace už ve v1:** spuštění AF v live view (`kEdsCameraCommand_DoEvfAf`, FlexiZone-Single na pruhu markeru) a jemné doladění po krocích (`DriveLensEvf`) podle míry ostrosti. Ostří se nejlépe **při bílém světle** (vysoký kontrast), pak se přepne na UV.
+- **Spoušť bez AF:** při focení nesmí foťák znovu zaostřit (EDSDK spoušť s variantou NonAF; při ručním focení přesunout AF na tlačítko * v uživatelských funkcích).
+- **Ostření se ověřuje na začátku každé session** a po každé změně zoomu (u zoomového objektivu se při změně ohniska posouvá i ostření; u STM objektivů může ostření po vypnutí foťáku ujet).
+- **Zoom je součást kalibrace:** flat platí jen pro danou polohu zoomu. Doporučení: zvolit jednu polohu, označit ji na objektivu a změnu zoomu brát jako novou kalibraci.
+- **Úroveň UV (70/100 %) je součást profilu a metadat;** flaty se pořizují pro používanou úroveň.
+- **Bílé světlo** slouží k ostření, zarovnání gelu a volitelnému dokumentačnímu snímku (pozice jamek). Jako flat pro fluorescenci se nepoužívá (jiné spektrum i rozložení).
+- **Darky bez krytky:** objektiv je ve skříni, takže dark = zhasnuté světlo, zavřená skříň, zakrytý okulár.
+- **Výběr kanálu se ověří na datech:** u EtBr za oranžovým filtrem R; pro SYBR změřit SNR v R a G kanálu a podle toho nastavit profil.
 
 ---
 
@@ -157,11 +193,11 @@ class Camera(Protocol):
 
 ### Průvodce (7 kroků)
 
-1. **Profil a popis gelu:** barvivo (EtBr, GelRed, SYBR…), název, poznámka. Profil určí kanál, doporučený filtr a výchozí expozici.
-2. **Kontrola scény:** live view s mřížkou; checklist (filtr, zavřený box, gel uprostřed).
-3. **Ostření:** live view na 10× lupě nad pruhem markeru; obsluha potvrdí.
+1. **Profil a popis gelu:** barvivo (EtBr, GelRed, SYBR…), úroveň UV (70/100 %), název, poznámka. Profil určí kanál a výchozí expozici.
+2. **Kontrola scény:** bílé světlo, live view s mřížkou; checklist (zavřená skříň, zakrytý okulár, gel uprostřed, zoom na označené poloze).
+3. **Ostření:** při bílém světle AF v live view na pruh markeru, pak jemné doladění po krocích podle míry ostrosti; obsluha potvrdí na 10× lupě. Potom přepnout na UV (zvolená úroveň 70/100 %).
 4. **Testovací expozice:** jeden RAW; aplikace změří nejjasnější oblast ve vybraném kanálu a navrhne čas, aby byla na 70–80 % rozsahu bez saturace. Nad limit (např. 30 s) radši víc snímků.
-5. **Kalibrace:** dark frames automaticky (zhasnutý transiluminátor, stejný čas a ISO). Flat field jednou za čas pro dané uspořádání; upozornění, když je starší než limit.
+5. **Kalibrace:** dark frames automaticky (zhasnuté světlo, zavřená skříň, stejný čas a ISO). Flat field jednou za čas pro dané uspořádání; upozornění, když je starší než limit.
 6. **Série:** N snímků (výchozí 8, volba 4–32), průběh, odhad zisku SNR (√N), kontrola saturace a posunu.
 7. **Kontrola a export:** výsledek vedle jednoho snímku pro srovnání šumu, mapa saturace, inverze; export jedním tlačítkem.
 
@@ -262,6 +298,9 @@ Syntetický gel: pozadí + Gaussovské pruhy se známou intenzitou + Poissonův 
 | Posun gelu nebo foťáku během série | detekce posunu, zarovnání nebo varování |
 | EOS Utility nebo digiCamControl drží foťák | při startu kontrola, srozumitelná hláška „zavřete jinou aplikaci, která používá foťák“ |
 | Opotřebení závěrky | rozumné výchozí N, počítadlo snímků |
+| Ostřicí kroužek nedosažitelný, AF u slabé fluorescence selhává | ostřit při bílém světle, softwarové doladění po krocích, spoušť bez AF, kontrola ostrosti na začátku session |
+| Ostření ujede po změně zoomu nebo po vypnutí foťáku | po každé změně zoomu a na začátku session přeostřit; zoom držet na označené poloze |
+| Světlo okulárem při dlouhé expozici | zakrýt okulár; upozornění v průvodci |
 
 ---
 
@@ -275,7 +314,7 @@ Celkem zhruba 4–6 týdnů soustředěné práce; odhady jsou orientační. Eta
 | 2. Pipeline | `processing/` + CLI nad uloženými RAW, syntetické testy | syntetický test potvrdí zisk SNR ≈ √N a linearitu | 3–5 dní |
 | 1a. GUI nad simulací | rozhraní `Camera`, `MockCamera`, hlavní okno, live view, histogram | GUI běží bez foťáku | 3–4 dny |
 | 0. Ověření EDSDK | skript: připojení, čtení povolených hodnot, nastavení času a ISO, vyfocení, stažení RAW, jeden snímek live view | funguje se 100D (a 500D) | 1–2 dny |
-| 1b. EdsdkCamera | implementace rozhraní nad EDSDK, vlákno s message loop, obnovení spojení | hlavní obrazovka funguje se skutečným 100D | 3–5 dní |
+| 1b. EdsdkCamera | implementace rozhraní nad EDSDK, vlákno s message loop, obnovení spojení, prodlužování časovače vypnutí, **AF v live view a posun ostření po krocích** | hlavní obrazovka funguje se skutečným 100D a umí zaostřit | 4–6 dní |
 | 3. Průvodce | 7 kroků, návrh expozice, automatické darky, série | obsluha bez instrukcí pořídí zpracovaný snímek | 5 dní |
 | 4. Profily a export | profily barviv, knihovna flatů, metadata, struktura složek | výstup projde pravidly integrity | 3–5 dní |
 | 5. Pilot | testy na skutečných gelech, PyInstaller balíček, test bez admina | týden provozu bez blokující chyby | 1–2 týdny průběžně |
@@ -293,8 +332,11 @@ Celkem zhruba 4–6 týdnů soustředěné práce; odhady jsou orientační. Eta
 
 ## 11. Otevřené otázky
 
-- [ ] Jaká barviva a jaký transiluminátor (UV, nebo modré světlo)?
-- [ ] Je emisní filtr a zatemnění, nebo je hardware součástí projektu?
+- [x] Sestava: kovová skříň, foťák shora, UV 70/100 % + bílé světlo, pevný oranžový filtr, ostření jen AF.
+- [ ] Jaká barviva se používají? (Při SYBR ověřit, kolik signálu projde oranžovým filtrem.)
+- [ ] Jaký objektiv (model, STM?) a v jaké poloze zoomu se fotí?
+- [ ] Vlnová délka UV (302/312/365 nm) a odkud svítí bílé světlo (zespodu přes konverzní desku, nebo shora)?
+- [ ] Jaké jsou parametry oranžového filtru (typ, hrana propustnosti)?
 - [ ] Kdo bude aplikaci obsluhovat, jazyk rozhraní?
 - [ ] Kam ukládat výsledky (lokálně, síťový disk, elektronický laboratorní deník)?
 - [ ] Jedno PC, nebo víc stanic?
@@ -322,9 +364,9 @@ Ceny zjištěné 30. 10. 2026 (evropští prodejci, s DPH, orientační):
 
 Doporučení: ASI533MM Pro nebo QHY533M; levný test přínosu mono kamery: ASI678MM. K tomu objektiv (C-mount nebo adaptér Canon EF) a u chlazených zdroj 12 V.
 
-### Softwarový autofokus (v2)
+### Softwarový autofokus (přesunuto do v1)
 
-Live view s lupou na pruh markeru → kroky `DriveLensEvf` (Near/Far 1–3) → míra ostrosti (rozptyl Laplaciánu) → hledání maxima hrubě, pak jemně. Objektiv musí být v AF; při focení použít spoušť bez AF. V praxi stačí zaostřit jednou, pokud je uchycení pevné.
+Live view s lupou na pruh markeru → kroky `DriveLensEvf` (Near/Far 1–3) → míra ostrosti (rozptyl Laplaciánu) → hledání maxima hrubě, pak jemně. Objektiv musí být v AF; při focení použít spoušť bez AF. Kvůli nedosažitelnému ostřicímu kroužku je to ve v1 jediný způsob ostření (viz kap. 3).
 
 ### Rychlé ověření bez programování
 

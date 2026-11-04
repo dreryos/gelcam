@@ -4,6 +4,12 @@ Desktopová aplikace pro Windows na focení agarózových gelů (PCR) zrcadlovko
 
 Celý plán, technické detaily a historie rozhodnutí: **`docs/GELCAM_PLAN.md`**. Před větší změnou si přečti příslušnou kapitolu.
 
+## Hardware
+
+- Kovová skříň, Canon EOS 100D zanořený shora, pevný oranžový filtr, UV lampa 70/100 % a bílé světlo.
+- Zoom ručně měnitelný, **ostřicí kroužek nedosažitelný** → ostření jen AF (v aplikaci přes EDSDK: AF v live view + posun po krocích). Spoušť vždy bez AF.
+- Zoom a úroveň UV jsou součást kalibrace a metadat. Dark = zhasnutá světla, zavřená skříň, zakrytý okulár.
+
 ## Stav
 
 - Fáze: začátek vývoje. Na přístup ke Canon EDSDK se čeká, proto se nejdřív staví pipeline a GUI nad `MockCamera`.
