@@ -12,7 +12,7 @@ Celý plán, technické detaily a historie rozhodnutí: **`docs/GELCAM_PLAN.md`*
 
 ## Stav
 
-- Fáze: začátek vývoje. **Přístup ke Canon EDSDK schválen 4. 11. 2026.** Založena kostra, rozhraní `Camera`, `MockCamera`, vrstva EDSDK a základní okno; další krok je etapa 0 na Windows s foťákem (`tools/edsdk_smoke.py`).
+- Fáze: etapa 0 a 1b (ovládání 100D přes EDSDK) hotové a ověřené na foťáku, etapa 2 (pipeline) rozpracovaná: `processing/raw_io.py`, `channel.py`. Další krok `calib` (master dark/flat). Podrobnosti a naměřené hodnoty v `docs/GELCAM_PLAN.md`.
 - Testovací RAW sady (světlé, dark, flat) jsou v `testdata/` (necommitují se).
 
 ## Stack

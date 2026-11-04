@@ -1,0 +1,14 @@
+# Sjednocení konců řádků mezi počítači (Windows/Linux)
+* text=auto
+*.py text eol=lf
+*.md text eol=lf
+*.toml text eol=lf
+*.yml text eol=lf
+# Binární soubory
+*.CR2 binary
+*.cr2 binary
+*.tif binary
+*.tiff binary
+*.png binary
+*.jpg binary
+*.dll binary
