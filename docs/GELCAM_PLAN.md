@@ -6,7 +6,7 @@ Kompletní kontext pro vývoj aplikace GelCam. Vznikl z konverzace 29. 10. – 4
 
 ## 1. O co jde
 
-Laboratoř fotí agarózové gely z PCR zrcadlovkou **Canon EOS 100D** (pro testy kompatibility je k dispozici i **EOS 500D**). Oficiální EOS Utility 2 na Windows padá hned při spuštění a dostupné alternativy (digiCamControl, qDslrDashboard, Lightroom…) buď nemají workflow pro gely, nebo jsou placené či složité.
+Laboratoř fotí agarózové gely z PCR zrcadlovkou **Canon EOS 100D** (pro testy kompatibility byl k dispozici i **EOS 500D**, nakonec se nepoužije). Oficiální EOS Utility 2 na Windows padá hned při spuštění a dostupné alternativy (digiCamControl, qDslrDashboard, Lightroom…) buď nemají workflow pro gely, nebo jsou placené či složité.
 
 **GelCam** je desktopová aplikace pro Windows, která:
 
@@ -338,7 +338,7 @@ Celkem zhruba 4–6 týdnů soustředěné práce; odhady jsou orientační.
 - `edsdk_smoke.py` bez `--capture`: **10/10 kroků**. Připojení OK (sériové č. (skryto)), čtení vlastností OK (baterie 80 %, režim M), povolené hodnoty se načetly (ISO 100–12800 + Auto, časy Bulb–1/4000, clony f/5.6–f/36), live view snímek 960×640 při ~16,5 fps, vypnutí live view OK.
 - Stav foťáku při testu: ISO 800, 8", f/8. Pro gely nastavovat ISO 100.
 - `edsdk_smoke.py --capture`: **11/11 kroků.** Vyfocení a stažení RAW (`IMG_0001.CR2`, ~24 MB) funguje. První pokus skončil JPEG, protože foťák měl v menu kvalitu JPEG: **aplikace zatím kvalitu obrazu nenastavuje** (chybí `Prop.IMAGE_QUALITY`), do etapy 1b doplnit čtení/nastavení ze seznamu povolených hodnot.
-- **Zbývá:** test na 500D a ověření ostření na scéně s kontrastem (viz etapa 1b).
+- **Zbývá:** viz výsledky etapy 1b níže.
 
 ### Výsledky etapy 1b (4. 11. 2026, vrstva EDSDK, Canon EOS 100D)
 
@@ -347,7 +347,8 @@ Celkem zhruba 4–6 týdnů soustředěné práce; odhady jsou orientační.
 - **Blokující aplikace:** před připojením se hledají běžící EOS Utility, digiCamControl, qDslrDashboard, Lightroom, Capture One, N.I.N.A. (`edsdk/blockers.py`). Při chybě „foťák nenalezen/obsazen" se jejich jména přidají do zprávy, jinak jen do `warnings`.
 - **Už před tím implementováno a nyní ověřeno bez chyby na 100D:** lupa 5×/1×, `DoEvfAf` (autofokus), `DriveLensEvf` (kroky Near/Far), spoušť bez AF (`Completely_NonAF`), prodlužování časovače vypnutí (každých 60 s + při `WillSoonShutDown`). `edsdk_smoke.py --focus --capture`: 19/19 kroků.
 - **Ostření ověřeno (4. 11. 2026, druhý pokus, kontrastní scéna se srovnávacím hřebenem):** z výrazného rozostření dostal **AF** (`DoEvfAf`) obraz ostrý (míra ostrosti 5,5 → 53, vizuálně potvrzeno na uloženém snímku live view). Jednotlivé kroky `DriveLensEvf` Near3/Far3 mění ostrost plynule a malým dílem (míra 5,5–8,9 při 12 krocích), takže jsou vhodné jen na doladění, ne na hrubé nastavení; hrubě ostří AF. První pokus na prázdné scéně nic neukázal.
-- **Zbývá z 1b:** test uspání foťáku (auto power off) a 500D.
+- **Zbývá z 1b:** test uspání foťáku (auto power off).
+- **500D:** test kompatibility se **nebude dělat** (rozhodnutí 4. 11. 2026, 500D se nebude používat). Podporovaný je jen 100D; kód ale dál čte povolené hodnoty z foťáku.
 
 
 ---
