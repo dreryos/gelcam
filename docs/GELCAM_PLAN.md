@@ -358,6 +358,23 @@ Celkem zhruba 4–6 týdnů soustředěné práce; odhady jsou orientační.
 - **Saturace:** LibRaw hlásí `white_level` = **13 583**, ale skutečné ořezání signálu je na **~15 304** (R a G mají stovky tisíc pixelů přesně na této hodnotě, B ji nedosáhl). Maska přepalů proto používá konzervativní `white_level` z RAW; pixely mezi 13 583 a 15 304 se tedy označí jako saturované, i když jsou ještě na hraně. Rozhodnout při kalibraci, jestli není lepší hranice odvozená z dat (např. 15 300).
 - **Zbývá z etapy 2:** `calib` (master dark – medián, master flat se `D_F`), `align` (fázová korelace), `stack` (sigma clipping), `binning`, `export` (16bit TIFF, preview, metadata), `pipeline` s historií kroků a testy: zisk SNR ≈ √N, linearita, hot pixely po darku, vinětace po flatu.
 
+### Naměřené darky a bias (4. 11. 2026, 100D, ISO 100, f/8)
+
+Pořízeno nástrojem `tools/capture_series.py` (jen hodnoty z `allowed_values`, po skončení se nastavení foťáku vrátí), 16 snímků v každé sadě, v `testdata/calib/` (necommituje se). Podmínky: světla zhasnutá, skříň zavřená, okulár zakrytý. Statistiky na surových mozaikách.
+
+| Sada | průměr nad černou | šum v čase (σ) | pixelů > medián+20 ADU | pixelů > medián+100 ADU | max (medián ze 16) |
+| --- | --- | --- | --- | --- | --- |
+| bias 1/4000 s | 2047,5 ADU | 7,2–7,5 ADU | 7 | 1 | 2150 |
+| dark 8 s | 2047,5 ADU | 7,2–7,3 ADU | 421 | 121 | 9205 |
+| dark 30 s | 2047,2 ADU | 7,3–7,4 ADU | 2228 | 124 | 11090 |
+
+- **Žádný světelný únik** ani zdvojení času: 30 s snímek trval 35,8 s, tedy redukce šumu při dlouhé expozici je vypnutá a darky jsou surová data.
+- **Black level** je v praxi 2047,5 ADU ve všech barvách a stabilní (drift průměru < 1 ADU za celou sadu); LibRaw hlásí 2048/2048/2048/2047, rozdíl 0,5 ADU je zanedbatelný, ale dark ho odstraní stejně.
+- **Šum v čase ≈ 7,3 ADU** (čtecí šum při ISO 100, stejný pro R, G, B a nezávislý na času až do 30 s).
+- **Žádný vzrůst průměrného temného proudu a žádný amp glow:** průměr po 30 s se neliší od biasu. Pozadí je rovnoměrné.
+- **Horké pixely:** asi **120 pixelů** je silně horkých (> 100 ADU nad pozadím) už při 8 s a jejich počet se při 30 s nemění; počet „teplých" pixelů (> 20 ADU) ale roste s časem: 7 → 421 → 2228 (z 18,1 Mpx). Darky tedy musí mít **stejný čas jako světlé snímky**; bias jako náhrada darku nestačí.
+- **Důsledek pro pipeline:** master dark = medián 8–16 darků (šum po mediánu ~2,2 ADU), `D_F` pro flat lze brát z darku stejného času, jeden snímek šumu ~7,3 ADU je při slabém signálu hlavní zdroj chyby, takže stacking se vyplatí.
+
 ---
 
 ## 11. Otevřené otázky
