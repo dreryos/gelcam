@@ -22,7 +22,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from gelcam.camera import FocusStep, Prop  # noqa: E402
+from gelcam.camera import FocusStep, Prop, ensure_raw_quality  # noqa: E402
 from gelcam.camera import values  # noqa: E402
 from gelcam.camera.edsdk import EdsdkCamera  # noqa: E402
 
@@ -73,11 +73,14 @@ def main() -> int:
         run("ISO", lambda: values.iso_label(int(cam.get(Prop.ISO))))
         run("čas", lambda: values.tv_label(int(cam.get(Prop.TV))))
         run("clona", lambda: values.av_label(int(cam.get(Prop.AV))))
+        run("kvalita obrazu", lambda: values.quality_label(int(cam.get(Prop.IMAGE_QUALITY))))
 
         step("Povolené hodnoty")
         run("ISO", lambda: ", ".join(values.iso_label(v) for v in cam.allowed_values(Prop.ISO)))
         run("čas", lambda: ", ".join(values.tv_label(v) for v in cam.allowed_values(Prop.TV)))
         run("clona", lambda: ", ".join(values.av_label(v) for v in cam.allowed_values(Prop.AV)))
+        run("kvalita obrazu", lambda: ", ".join(
+            f"{values.quality_label(v)} (0x{v:X})" for v in cam.allowed_values(Prop.IMAGE_QUALITY)))
 
         step("Live view")
 
@@ -113,6 +116,7 @@ def main() -> int:
 
         if args.capture:
             step("Focení")
+            run("kvalita RAW", lambda: "změněna na " + hex(q) if (q := ensure_raw_quality(cam)) else "už RAW")
             run("snímek + stažení", lambda: str(cam.capture(OUT)))
     finally:
         cam.disconnect()

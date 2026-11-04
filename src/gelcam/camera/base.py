@@ -21,13 +21,14 @@ class Prop(Enum):
     ISO = "iso"
     TV = "tv"  # čas závěrky
     AV = "av"  # clona
+    IMAGE_QUALITY = "image_quality"  # kód EdsImageQuality; aplikace potřebuje RAW
     AE_MODE = "ae_mode"  # jen čtení: poloha voliče režimů
     BATTERY = "battery"  # jen čtení
     PRODUCT_NAME = "product_name"  # jen čtení
 
 
 #: Vlastnosti, které aplikace smí zapisovat. Ostatní jsou jen pro čtení.
-WRITABLE_PROPS: frozenset[Prop] = frozenset({Prop.ISO, Prop.TV, Prop.AV})
+WRITABLE_PROPS: frozenset[Prop] = frozenset({Prop.ISO, Prop.TV, Prop.AV, Prop.IMAGE_QUALITY})
 
 
 class FocusStep(Enum):
@@ -107,6 +108,24 @@ class Camera(Protocol):
     def capture(self, dest_dir: Path) -> Path:
         """Vyfotí bez AF, stáhne soubor do `dest_dir` a vrátí jeho cestu."""
         ...
+
+
+def ensure_raw_quality(camera: Camera) -> int | None:
+    """Zajistí, aby foťák ukládal jen RAW; vrátí nastavený kód, nebo None, když už tak je.
+
+    Vybírá výhradně z hodnot, které foťák nabízí (`allowed_values`). Když foťák
+    žádné samotné RAW nenabízí, vyvolá CameraError.
+    """
+    from . import values
+
+    current = int(camera.get(Prop.IMAGE_QUALITY))
+    if values.is_raw_only(current):
+        return None
+    target = values.preferred_raw_quality(camera.allowed_values(Prop.IMAGE_QUALITY))
+    if target is None:
+        raise CameraError("Foťák nenabízí kvalitu RAW bez JPEG. Nastavte RAW v menu foťáku.")
+    camera.set(Prop.IMAGE_QUALITY, target)
+    return target
 
 
 def check_allowed(camera: Camera, prop: Prop, value: int) -> None:

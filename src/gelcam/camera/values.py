@@ -74,3 +74,36 @@ def av_fnumber(code: int) -> float:
 
 def av_label(code: int) -> str:
     return f"f/{av_fnumber(code):g}"
+
+
+# --- kvalita obrazu (EdsImageQuality) ---
+# Kód 0xSSTTJJKK: SS = velikost RAW, TT = typ RAW (0x64) nebo 0, JJ/KK = JPEG;
+# 0xFF0F v dolních 16 bitech znamená „bez druhého snímku“.
+_Q_RAW_TYPE = 0x64
+_Q_NO_SECOND = 0xFF0F
+_Q_SIZES = {0: "L", 1: "M", 2: "S"}
+
+
+def is_raw_only(code: int) -> bool:
+    """True, když foťák ukládá jen RAW (bez JPEG)."""
+    return (code >> 16) & 0xFF == _Q_RAW_TYPE and code & 0xFFFF == _Q_NO_SECOND
+
+
+def has_raw(code: int) -> bool:
+    return (code >> 16) & 0xFF == _Q_RAW_TYPE
+
+
+def preferred_raw_quality(allowed: list[int]) -> int | None:
+    """Z nabízených kódů vybere RAW bez JPEG v plné velikosti (jinak None)."""
+    candidates = [c for c in allowed if is_raw_only(c)]
+    full = [c for c in candidates if (c >> 24) & 0xFF == 0]
+    return (full or candidates or [None])[0]
+
+
+def quality_label(code: int) -> str:
+    size = _Q_SIZES.get((code >> 24) & 0xFF, "?")
+    if is_raw_only(code):
+        return f"RAW ({size})" if size != "L" else "RAW"
+    if has_raw(code):
+        return "RAW + JPEG"
+    return "JPEG"

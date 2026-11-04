@@ -15,7 +15,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .base import CameraError, CameraInfo, FocusStep, Prop, check_allowed
+from .base import CameraError, CameraInfo, FocusStep, Prop, check_allowed, ensure_raw_quality
 from ..testing.synthetic import SyntheticGel, expose, to_preview_rgb
 
 # Hodnoty, jaké nabízí 100D v režimu M (kódy EDSDK)
@@ -26,6 +26,9 @@ _TV_CODES = [0x0C, 0x10, 0x13, 0x15, 0x18, 0x1B, 0x1D, 0x20, 0x23, 0x25, 0x28, 0
              0x7D, 0x80, 0x83, 0x85, 0x88, 0x8B, 0x8D, 0x90, 0x93, 0x95, 0x98]
 _AV_CODES = [0x25, 0x28, 0x2B, 0x2D, 0x30, 0x33, 0x35, 0x38, 0x3B, 0x3D, 0x40, 0x43, 0x45, 0x48,
              0x4B, 0x4D, 0x50]
+
+
+_QUALITY_CODES = [0x13FF0F, 0x12FF0F, 0x640013, 0x64FF0F]  # jako 100D: JPEG, RAW+JPEG, RAW
 
 
 class MockCamera:
@@ -42,7 +45,7 @@ class MockCamera:
         self._gel = SyntheticGel()
         self._signal = self._gel.signal() * self._gel.flat_field()
         self._values: dict[Prop, int | str] = {
-            Prop.ISO: 0x48, Prop.TV: 0x38, Prop.AV: 0x30, Prop.AE_MODE: 3,
+            Prop.ISO: 0x48, Prop.TV: 0x38, Prop.AV: 0x30, Prop.IMAGE_QUALITY: 0x64FF0F, Prop.AE_MODE: 3,
             Prop.BATTERY: 100, Prop.PRODUCT_NAME: "Canon EOS 100D (simulace)",
         }
 
@@ -66,7 +69,8 @@ class MockCamera:
     # --- vlastnosti ---
     def allowed_values(self, prop: Prop) -> list[int]:
         self._require()
-        return {Prop.ISO: _ISO_CODES, Prop.TV: _TV_CODES, Prop.AV: _AV_CODES}.get(prop, [])
+        return {Prop.ISO: _ISO_CODES, Prop.TV: _TV_CODES, Prop.AV: _AV_CODES,
+                Prop.IMAGE_QUALITY: _QUALITY_CODES}.get(prop, [])
 
     def get(self, prop: Prop) -> int | str:
         self._require()
@@ -128,6 +132,7 @@ class MockCamera:
     # --- focení ---
     def capture(self, dest_dir: Path) -> Path:
         self._require()
+        ensure_raw_quality(self)
         dest_dir.mkdir(parents=True, exist_ok=True)
         time.sleep(self._latency)
         self._counter += 1

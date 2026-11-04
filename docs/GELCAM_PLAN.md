@@ -338,7 +338,17 @@ Celkem zhruba 4–6 týdnů soustředěné práce; odhady jsou orientační.
 - `edsdk_smoke.py` bez `--capture`: **10/10 kroků**. Připojení OK (sériové č. (skryto)), čtení vlastností OK (baterie 80 %, režim M), povolené hodnoty se načetly (ISO 100–12800 + Auto, časy Bulb–1/4000, clony f/5.6–f/36), live view snímek 960×640 při ~16,5 fps, vypnutí live view OK.
 - Stav foťáku při testu: ISO 800, 8", f/8. Pro gely nastavovat ISO 100.
 - `edsdk_smoke.py --capture`: **11/11 kroků.** Vyfocení a stažení RAW (`IMG_0001.CR2`, ~24 MB) funguje. První pokus skončil JPEG, protože foťák měl v menu kvalitu JPEG: **aplikace zatím kvalitu obrazu nenastavuje** (chybí `Prop.IMAGE_QUALITY`), do etapy 1b doplnit čtení/nastavení ze seznamu povolených hodnot.
-- **Zbývá:** test na 500D, `Prop.IMAGE_QUALITY`.
+- **Zbývá:** test na 500D a ověření ostření na scéně s kontrastem (viz etapa 1b).
+
+### Výsledky etapy 1b (4. 11. 2026, vrstva EDSDK, Canon EOS 100D)
+
+- **`Prop.IMAGE_QUALITY`:** čtení i nastavení jen z hodnot, které foťák vrátí (`EdsGetPropertyDesc`). 100D nabízí JPEG varianty, RAW+JPEG (0x640013) a RAW (0x64FF0F); M-RAW/S-RAW nenabízí. `ensure_raw_quality(camera)` vybere RAW bez JPEG v plné velikosti a `capture()` ji volá samo, takže obsluha nemusí hlídat menu foťáku. Ověřeno na foťáku: po přepnutí na JPEG se při focení vrátilo RAW. Při připojení se přidá upozornění, pokud foťák RAW neukládá.
+- **Obnovení spojení:** `EdsdkCamera.reconnect()` (zavře spojení, zkusí navázat nové a vrátí naposledy nastavené ISO, čas a clonu). Ověřeno rozumným voláním na připojeném foťáku; skutečné odpojení kabelu ani uspání foťáku zatím netestováno.
+- **Blokující aplikace:** před připojením se hledají běžící EOS Utility, digiCamControl, qDslrDashboard, Lightroom, Capture One, N.I.N.A. (`edsdk/blockers.py`). Při chybě „foťák nenalezen/obsazen" se jejich jména přidají do zprávy, jinak jen do `warnings`.
+- **Už před tím implementováno a nyní ověřeno bez chyby na 100D:** lupa 5×/1×, `DoEvfAf` (autofokus), `DriveLensEvf` (kroky Near/Far), spoušť bez AF (`Completely_NonAF`), prodlužování časovače vypnutí (každých 60 s + při `WillSoonShutDown`). `edsdk_smoke.py --focus --capture`: 19/19 kroků.
+- **Neověřeno:** že AF a kroky ostření skutečně mění ostrost. Foťák ve skříni mířil na prázdnou scénu a míra ostrosti (rozptyl Laplaciánu) se skoro nehýbala (437 → 433 → 437 → 430), po AF klesla na 88, tedy bez kontrastního cíle nelze nic usuzovat. Zopakovat s gelem nebo markerem pod bílým světlem před dalším vývojem ostření (kap. 12).
+- **Zbývá z 1b:** test ostření na kontrastní scéně, test reálného odpojení kabelu a uspání foťáku, 500D.
+
 
 ---
 

@@ -1,8 +1,8 @@
 """Implementace rozhraní `Camera` nad Canon EDSDK.
 
 Bezpečnostní zásady (viz CLAUDE.md):
-- do foťáku se zapisují jen ISO, čas a clona a jen hodnoty, které foťák sám
-  nabídne v `allowed_values()`; kvalitu snímku ani jiné nastavení neměníme,
+- do foťáku se zapisují jen ISO, čas, clona a kvalita obrazu (RAW) a jen
+  hodnoty, které foťák sám nabídne v `allowed_values()`; jiné nastavení neměníme,
 - jediné další zápisy jsou standardní nastavení hostitele, která používá
   každá aplikace nad EDSDK: SaveTo = Host, kapacita hostitele, výstup live view,
 - všechna volání SDK běží ve vlákně `EdsdkWorker`.
@@ -19,7 +19,8 @@ from pathlib import Path
 import numpy as np
 
 from .. import values
-from ..base import CameraError, CameraInfo, FocusStep, Prop, check_allowed
+from ..base import CameraError, CameraInfo, FocusStep, Prop, check_allowed, ensure_raw_quality
+from .blockers import find_blockers
 from . import constants as C
 from .binding import EdsCapacity, EdsDeviceInfo, EdsPoint, EdsPropertyDesc, Edsdk, check
 from .binding import ObjectEventHandler, PropertyEventHandler, StateEventHandler
@@ -29,6 +30,7 @@ _PROP_IDS = {
     Prop.ISO: C.kEdsPropID_ISOSpeed,
     Prop.TV: C.kEdsPropID_Tv,
     Prop.AV: C.kEdsPropID_Av,
+    Prop.IMAGE_QUALITY: C.kEdsPropID_ImageQuality,
     Prop.AE_MODE: C.kEdsPropID_AEMode,
     Prop.BATTERY: C.kEdsPropID_BatteryLevel,
 }
@@ -59,18 +61,59 @@ class EdsdkCamera:
         self._transfers: list[Path] = []
         self._transfer_error: Exception | None = None
         self.warnings: list[str] = []
+        self._remembered: dict[Prop, int] = {}
 
     # ------------------------------------------------------------------ připojení
     def connect(self) -> CameraInfo:
         if self._connected:
             raise CameraError("Foťák už je připojený.")
+        blockers = find_blockers()
         self._worker = EdsdkWorker()
         try:
-            return self._worker.call(self._connect)
+            info = self._worker.call(self._connect)
+        except CameraError as exc:
+            self._worker.stop()
+            self._worker = None
+            if blockers and exc.code in (C.EDS_ERR_DEVICE_NOT_FOUND, C.EDS_ERR_COMM_PORT_IS_IN_USE,
+                                         C.EDS_ERR_DEVICE_BUSY):
+                raise CameraError(f"{exc} Běží aplikace, která může foťák držet: {', '.join(blockers)}. "
+                                  "Zavřete ji a zkuste to znovu.", exc.code) from exc
+            raise
         except Exception:
             self._worker.stop()
             self._worker = None
             raise
+        if blockers:
+            self.warnings.append(f"Běží aplikace, která může foťák rušit: {', '.join(blockers)}.")
+        return info
+
+    def reconnect(self, attempts: int = 5, delay: float = 2.0) -> CameraInfo:
+        """Znovu naváže spojení po uspání, odpojení kabelu nebo vypnutí foťáku.
+
+        Obnoví naposledy nastavené ISO, čas a clonu (jen pokud je foťák stále nabízí).
+        """
+        remembered = dict(self._remembered)
+        try:
+            self.disconnect()
+        except Exception:  # noqa: BLE001 - spojení už může být mrtvé
+            self._worker = None
+            self._connected = False
+        last: Exception | None = None
+        for i in range(attempts):
+            try:
+                info = self.connect()
+                break
+            except CameraError as exc:
+                last = exc
+                time.sleep(delay)
+        else:
+            raise CameraError(f"Obnovení spojení se nezdařilo: {last}") from last
+        for prop, value in remembered.items():
+            try:
+                self.set(prop, value)
+            except CameraError:
+                self.warnings.append(f"Po obnovení spojení se nepodařilo vrátit {prop.value}.")
+        return info
 
     def _connect(self) -> CameraInfo:
         sdk = self._sdk = Edsdk(self._vendor_dir)
@@ -105,6 +148,11 @@ class EdsdkCamera:
         self.warnings = []
         if self._get_u32(C.kEdsPropID_AEMode) != C.AE_MODE_MANUAL:
             self.warnings.append("Volič režimů není v poloze M. Přepněte foťák do ručního režimu.")
+        try:
+            if not values.is_raw_only(self._get_u32(C.kEdsPropID_ImageQuality)):
+                self.warnings.append("Foťák neukládá samotné RAW. Aplikace ho před focením přepne na RAW.")
+        except CameraError:
+            pass
 
         return CameraInfo(
             model=self._get_str(C.kEdsPropID_ProductName),
@@ -152,7 +200,7 @@ class EdsdkCamera:
         return self._call(self._allowed_values, prop)
 
     def _allowed_values(self, prop: Prop) -> list[int]:
-        if prop not in (Prop.ISO, Prop.TV, Prop.AV):
+        if prop not in (Prop.ISO, Prop.TV, Prop.AV, Prop.IMAGE_QUALITY):
             return []
         desc = EdsPropertyDesc()
         check(self._sdk.EdsGetPropertyDesc(self._cam, _PROP_IDS[prop], byref(desc)), "Povolené hodnoty")
@@ -172,6 +220,8 @@ class EdsdkCamera:
     def _set(self, prop: Prop, value: int) -> None:
         check_allowed(self, prop, value)  # znovu čte seznam z foťáku těsně před zápisem
         self._retry_busy(lambda: self._set_u32(_PROP_IDS[prop], value))
+        if prop in (Prop.ISO, Prop.TV, Prop.AV):
+            self._remembered[prop] = value
 
     # ------------------------------------------------------------------ live view
     def start_live_view(self) -> None:
@@ -261,6 +311,7 @@ class EdsdkCamera:
     # ------------------------------------------------------------------ focení
     def capture(self, dest_dir: Path) -> Path:
         dest_dir.mkdir(parents=True, exist_ok=True)
+        ensure_raw_quality(self)
         tv = values.tv_seconds(int(self.get(Prop.TV)))
         if tv is None:
             raise CameraError("Režim Bulb zatím GelCam nepodporuje. Zvolte čas do 30 s.")
