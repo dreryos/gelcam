@@ -12,7 +12,7 @@ Celý plán, technické detaily a historie rozhodnutí: **`docs/GELCAM_PLAN.md`*
 
 ## Stav
 
-- Fáze: začátek vývoje. Na přístup ke Canon EDSDK se čeká, proto se nejdřív staví pipeline a GUI nad `MockCamera`.
+- Fáze: začátek vývoje. **Přístup ke Canon EDSDK schválen 4. 11. 2026.** Založena kostra, rozhraní `Camera`, `MockCamera`, vrstva EDSDK a základní okno; další krok je etapa 0 na Windows s foťákem (`tools/edsdk_smoke.py`).
 - Testovací RAW sady (světlé, dark, flat) jsou v `testdata/` (necommitují se).
 
 ## Stack
@@ -26,7 +26,9 @@ Celý plán, technické detaily a historie rozhodnutí: **`docs/GELCAM_PLAN.md`*
 
 - `uv sync` – instalace závislostí
 - `uv run pytest` – testy
-- `uv run python -m gelcam` – spuštění aplikace
+- `uv run python -m gelcam` – spuštění aplikace (`--mock` bez foťáku)
+- `uv run python tools/check_edsdk_constants.py` – kontrola konstant EDSDK proti hlavičkám
+- `uv run python tools/edsdk_smoke.py [--capture]` – diagnostika etapy 0 (Windows + 100D)
 
 ## Architektura v kostce
 
@@ -41,7 +43,7 @@ Celý plán, technické detaily a historie rozhodnutí: **`docs/GELCAM_PLAN.md`*
 5. **EDSDK jen v jednom vlákně s Windows message loop.** GUI komunikuje přes frontu nebo Qt signály.
 6. **Bez administrátorských práv:** nic nezapisovat do Program Files ani registru; nastavení do `%APPDATA%\GelCam`. Žádné závislosti, které vyžadují instalaci ovladačů.
 7. **Licence Canon:** obsah `vendor/edsdk/` ani `testdata/` nikdy necommitovat.
-8. Kód musí jít vyvíjet a testovat bez připojeného foťáku (MockCamera, syntetická data v `tests/synthetic.py`).
+8. Kód musí jít vyvíjet a testovat bez připojeného foťáku (MockCamera, syntetická data v `src/gelcam/testing/synthetic.py`).
 
 ## Konvence
 

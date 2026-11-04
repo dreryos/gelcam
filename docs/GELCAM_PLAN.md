@@ -150,8 +150,8 @@ gelcam/
       wizard/            # 7 kroků průvodce
   profiles/              # etbr.toml, gelred.toml, sybr.toml
   tests/
-    synthetic.py         # generátor syntetických gelů se známým signálem a šumem
-    test_*.py
+    test_*.py            # testy; syntetické gely generuje src/gelcam/testing/synthetic.py
+  tools/                 # check_edsdk_constants.py, edsdk_smoke.py (etapa 0)
   vendor/edsdk/          # DLL a hlavičky Canon – NECOMMITOVAT (.gitignore)
   testdata/              # nafocené sady – NECOMMITOVAT
 ```
@@ -306,11 +306,13 @@ Syntetický gel: pozadí + Gaussovské pruhy se známou intenzitou + Poissonův 
 
 ## 10. Etapy vývoje
 
-Celkem zhruba 4–6 týdnů soustředěné práce; odhady jsou orientační. Etapy 2 a 1 (nad MockCamera) jdou dělat ještě před schválením EDSDK.
+Celkem zhruba 4–6 týdnů soustředěné práce; odhady jsou orientační.
+
+**Stav 4. 11. 2026:** přístup ke Canon EDSDK je schválený. Pořadí se proto mění: hned po přípravě jde **etapa 0 a 1b (ovládání foťáku)**, pipeline (etapa 2) běží souběžně nad testovacími daty. Kostra projektu, rozhraní `Camera`, `MockCamera`, vrstva EDSDK (`src/gelcam/camera/edsdk/`), diagnostický skript etapy 0 (`tools/edsdk_smoke.py`), kontrola konstant proti hlavičkám (`tools/check_edsdk_constants.py`) a základní okno jsou založené; čekají na první spuštění na Windows s foťákem.
 
 | Etapa | Obsah | Hotovo, když | Odhad |
 | --- | --- | --- | --- |
-| P. Příprava | repo, `uv`, struktura, CI testy; nafocení testovacích sad přes digiCamControl; žádost o EDSDK | repo běží, testovací data jsou k dispozici | 1 den |
+| P. Příprava | repo, `uv`, struktura, CI testy; nafocení testovacích sad; ~~žádost o EDSDK~~ (schváleno 4. 11.) | repo běží, testovací data jsou k dispozici | 1 den |
 | 2. Pipeline | `processing/` + CLI nad uloženými RAW, syntetické testy | syntetický test potvrdí zisk SNR ≈ √N a linearitu | 3–5 dní |
 | 1a. GUI nad simulací | rozhraní `Camera`, `MockCamera`, hlavní okno, live view, histogram | GUI běží bez foťáku | 3–4 dny |
 | 0. Ověření EDSDK | skript: připojení, čtení povolených hodnot, nastavení času a ISO, vyfocení, stažení RAW, jeden snímek live view | funguje se 100D (a 500D) | 1–2 dny |
@@ -376,7 +378,15 @@ Série přes digiCamControl nebo N.I.N.A. → kalibrace a stacking v Sirilu (zar
 
 ## 13. Odkazy
 
-- Canon Developer Programme (EDSDK): registrace přes web Canon (Canon Developer Community / Developer Programme pro Evropu).
+- Canon Developer Programme (EDSDK): registrace přes web Canon (Canon Developer Community / Developer Programme pro Evropu). **Přístup schválen 4. 11. 2026.**
+
+### Jak vložit EDSDK do projektu
+
+1. Stáhni z portálu Canon nejnovější EDSDK pro Windows a rozbal ho.
+2. Zkopíruj **64bitové** DLL (`EDSDK_64/Dll/EDSDK.dll`, `EdsImage.dll`) do `vendor/edsdk/Dll/` a hlavičky (`EDSDK/Header/*.h`) do `vendor/edsdk/Header/`.
+3. Spusť `uv run python tools/check_edsdk_constants.py` – porovná konstanty v `src/gelcam/camera/edsdk/constants.py` s hlavičkami.
+4. V poznámkách k vydání SDK ověř, že je **EOS 100D** v seznamu podporovaných modelů, a verzi SDK zapiš sem.
+5. `vendor/edsdk/` se necommituje (licence Canon).
 - digiCamControl (referenční implementace EDSDK v C#): https://github.com/dukus/digiCamControl
 - edsdk-python (Jiloc): https://github.com/Jiloc/edsdk-python
 - pyedsdk (PyPI): https://pypi.org/project/pyedsdk/
@@ -390,4 +400,4 @@ Série přes digiCamControl nebo N.I.N.A. → kalibrace a stacking v Sirilu (zar
 
 ## 14. Úvodní prompt pro první session v Claude Code
 
-> Přečti si `CLAUDE.md` a `docs/GELCAM_PLAN.md`. Začínáme etapou „P. Příprava“ a „2. Pipeline“. Založ projekt přes `uv` (Python 3.12 x64) se strukturou z kapitoly 4, `.gitignore` pro `vendor/edsdk/` a `testdata/`, a napiš generátor syntetických gelů (`tests/synthetic.py`) a první testy pro stacking a dark frame. Testovací RAW sady jsou ve složce `testdata/`. Ptej se, když narazíš na nejasnost v plánu.
+> Přečti si `CLAUDE.md` a `docs/GELCAM_PLAN.md`. Kostra projektu a vrstva EDSDK už existují. Na tomto Windows PC je připojený Canon EOS 100D a EDSDK je ve `vendor/edsdk/`. Spusť `uv sync`, `uv run pytest`, pak `uv run python tools/check_edsdk_constants.py` a `uv run python tools/edsdk_smoke.py` (nejdřív bez `--capture`). Opravuj, co nepůjde, a výsledky etapy 0 zapiš do plánu. Ptej se, když narazíš na nejasnost.
