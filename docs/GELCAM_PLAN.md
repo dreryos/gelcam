@@ -351,6 +351,13 @@ Celkem zhruba 4–6 týdnů soustředěné práce; odhady jsou orientační.
 - **500D:** test kompatibility se **nebude dělat** (rozhodnutí 4. 11. 2026, 500D se nebude používat). Podporovaný je jen 100D; kód ale dál čte povolené hodnoty z foťáku.
 
 
+### Postup etapy 2 – pipeline (4. 11. 2026)
+
+- **Hotovo:** `processing/raw_io.py` (`RawFrame`, `read_raw`: CR2 přes rawpy bez demozaikování, soubor se nemění) a `processing/channel.py` (`select_channel` R/G/B bez interpolace, G = průměr dvou G pixelů v buňce 2×2, výstup poloviční rozlišení; `saturation_mask`). Testy: syntetická mozaika (přesné pixely, jiná fáze CFA, lichý rozměr, nezměněný vstup) a skutečný CR2 z 100D. `rawpy`, `tifffile` a `opencv-python-headless` jsou teď běžné závislosti.
+- **Poznatky o CR2 ze 100D (IMG_0001.CR2):** viditelná plocha **5208 × 3476** (ne 5184 × 3456, to je jen výřez `crop_*`), vzor `RGBG` s vlevo nahoře R (`raw_pattern` [[0,1],[3,2]]), black level 2048/2048/2048/2047, kanál R/G po výběru 2604 × 1738.
+- **Saturace:** LibRaw hlásí `white_level` = **13 583**, ale skutečné ořezání signálu je na **~15 304** (R a G mají stovky tisíc pixelů přesně na této hodnotě, B ji nedosáhl). Maska přepalů proto používá konzervativní `white_level` z RAW; pixely mezi 13 583 a 15 304 se tedy označí jako saturované, i když jsou ještě na hraně. Rozhodnout při kalibraci, jestli není lepší hranice odvozená z dat (např. 15 300).
+- **Zbývá z etapy 2:** `calib` (master dark – medián, master flat se `D_F`), `align` (fázová korelace), `stack` (sigma clipping), `binning`, `export` (16bit TIFF, preview, metadata), `pipeline` s historií kroků a testy: zisk SNR ≈ √N, linearita, hot pixely po darku, vinětace po flatu.
+
 ---
 
 ## 11. Otevřené otázky

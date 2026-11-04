@@ -9,11 +9,7 @@ dependencies = [
     "pillow>=10.0",
     "platformdirs>=4.0",
     "pyside6>=6.6",
-]
-
-[project.optional-dependencies]
-processing = [
-    "rawpy>=0.19",
+    "rawpy>=0.28.0",
     "tifffile>=2024.1",
     "opencv-python-headless>=4.9",
 ]
