@@ -24,6 +24,14 @@ Pro skutečný foťák zkopírujte 64bitové DLL z Canon EDSDK do `vendor/edsdk/
 5. Zavřete EOS Utility, digiCamControl a podobné programy, než spustíte aplikaci s foťákem.
 6. **Testovací snímky** (`testdata/`, CR2 z 100D, asi 2,6 GB) nejsou v gitu; viz dohodnutý způsob sdílení v `docs/GELCAM_PLAN.md`. Bez nich jde vyvíjet nad syntetickými daty (`src/gelcam/testing/synthetic.py`) a `MockCamera`.
 
+## Práce na jiném systému než Windows (macOS, Linux)
+
+Na UI a zpracování snímků jde pracovat kdekoli; jen práce se skutečným foťákem je vázaná na Windows.
+
+- **Funguje všude:** UI v PySide6 a `uv run python -m gelcam --mock` (simulovaný foťák `MockCamera`), pipeline (`rawpy`, `numpy`, `tifffile`, `opencv-python-headless` mají balíčky pro macOS i Linux), testy (`uv run pytest`) a syntetická data (`src/gelcam/testing/synthetic.py`). Testy nad skutečnými CR2 se bez složky `testdata/` přeskočí. Na macOS nainstalujte `uv` např. přes `brew install uv`.
+- **Jen Windows:** skutečný foťák (`EdsdkCamera` volá `EDSDK.dll` přes `ctypes` a zpracovává zprávy Windows), závěrečné ověření vzhledu a chování UI (písma, škálování displeje, rozložení oken se mohou lišit), balení PyInstallerem a test bez administrátora.
+- **Praxe:** UI stavět nad `MockCamera` (live view, histogram, ostření, chyby spojení musí simulace pokrývat); cokoli, co se týká foťáku, ověřit na Windows s připojeným 100D. Nic v `ui/` ani `acquisition/` nesmí volat EDSDK přímo, jen rozhraní `Camera`, jinak se kód na jiném systému nespustí.
+
 - Plán, architektura a historie rozhodnutí: [docs/GELCAM_PLAN.md](docs/GELCAM_PLAN.md)
 - Kontext pro Claude Code: [CLAUDE.md](CLAUDE.md)
 - Návod na nafocení testovacích dat: [docs/TESTOVACI_DATA.md](docs/TESTOVACI_DATA.md)

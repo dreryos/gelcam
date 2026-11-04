@@ -34,6 +34,12 @@ Celý plán, technické detaily a historie rozhodnutí: **`docs/GELCAM_PLAN.md`*
 
 `ui/` → `acquisition/` → `camera/` (rozhraní `Camera`, implementace `MockCamera`, `EdsdkCamera`) a `processing/` → `storage/`. GUI ani řízení snímání nesmí volat EDSDK přímo; vše jde přes rozhraní `Camera`.
 
+## Práce na více systémech
+
+- UI, `acquisition/`, `processing/` a testy se vyvíjejí a spouštějí na Windows, macOS i Linuxu (`uv sync`, `uv run python -m gelcam --mock`, `uv run pytest`). Pro vývoj UI bez foťáku slouží `MockCamera`; rozšiřuj ji, když UI potřebuje další chování (histogram, chyby, ztráta spojení).
+- Jen na Windows: `EdsdkCamera` (EDSDK.dll přes ctypes, message loop), práce s foťákem, závěrečné ověření UI (písma, DPI), PyInstaller. Kód mimo `camera/edsdk/` nesmí importovat EDSDK ani nic z Windows API.
+- `vendor/edsdk/` a `testdata/` se na novém počítači doplňují ručně (viz README); v gitu nejsou.
+
 ## Pravidla, která neporušovat
 
 1. **Integrita dat:** původní RAW se nikdy nemění. `result.tif` obsahuje jen lineární operace na celém obrazu. Jas, kontrast, gamma a inverze ovlivňují jen náhled. Každý krok zpracování se zapisuje do `metadata.json`.
