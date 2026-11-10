@@ -23,7 +23,7 @@ from .binning import bin2x2
 from .calib import calibrate, master_dark, master_flat
 from .export import write_preview_png, write_result_tiff
 from .framestack import FrameStack, build_stack, plane_shape
-from .stack import sigma_clip_mean
+from .stack import CLIP_METHOD, sigma_clip_mean
 
 TILE_ROWS = 64
 BLOCK = 64
@@ -177,7 +177,8 @@ def process(
         if dk.array.shape[1:] != shape:
             raise ValueError(f"Dark shape {dk.array.shape[1:]} differs from light shape {shape}")
         dark = master_dark(dk.array, TILE_ROWS, check)
-        steps.append({"step": "master_dark", "frames": [Path(p).name for p in darks], "method": "sigma-clipped mean",
+        steps.append({"step": "master_dark", "frames": [Path(p).name for p in darks], **CLIP_METHOD,
+                      "sigma": 3.0, "iterations": 3,
                       "median_adu": float(np.median(dark))})
         dk.discard()
 
@@ -190,7 +191,8 @@ def process(
             flat, clipped = master_flat(fl.array, master_dark(fd.array, TILE_ROWS, check), tile_rows=TILE_ROWS,
                                         check=check)
             steps.append({"step": "master_flat", "flats": [Path(p).name for p in flats],
-                          "flat_darks": [Path(p).name for p in flat_darks], "clipped_pixels": clipped})
+                          "flat_darks": [Path(p).name for p in flat_darks], "clipped_pixels": clipped,
+                          **CLIP_METHOD, "sigma": 3.0, "iterations": 3})
             fl.discard()
             fd.discard()
         else:
@@ -231,7 +233,7 @@ def process(
         report("Stacking", 0.65)
         result, rejected = sigma_clip_mean(cal, sigma=3.0, iterations=3, tile_rows=TILE_ROWS, check=check)
         all_sat = int(np.isnan(result).sum())
-        steps.append({"step": "stack", "method": "sigma-clipped mean", "sigma": 3.0, "iterations": 3,
+        steps.append({"step": "stack", **CLIP_METHOD, "sigma": 3.0, "iterations": 3,
                       "frames": n, "rejected_samples": rejected,
                       "rejected_fraction": rejected / float(cal.size),
                       "saturated_samples_excluded": sat_samples, "saturated_in_all_frames": all_sat})
