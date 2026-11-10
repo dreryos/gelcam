@@ -240,8 +240,8 @@ def build_liveview(mcp, server="figcraft", x0=0, y0=2880):
         band(N, pv, 272, yy, 236, 14, "#C7C7C7", 0.92 - i * 0.14)
     af = N("frame", pv, x=264, y=104, width=252, height=42, props={
         "fill": TRANS, "stroke": "#58D06A", "strokeWeight": 2, "cornerRadius": 2})
-    text(N, af, "AF point", 10, "#58D06A")
-    text(N, pv, "live view · 960 × 640 · 16.5 fps", 11, "#7A7A7A")
+    text(N, af, "AF point", 11, "#58D06A")
+    text(N, pv, "live view · 960 × 640 · 16.5 fps", 11, PV_INK)
 
     display_strip(N, leftcol, PANE_W, "white", black=0.03, white=0.86,
                   gamma="1.00", auto=False)
@@ -277,7 +277,7 @@ def build_liveview(mcp, server="figcraft", x0=0, y0=2880):
         band(N, nav, 50, yy, 52, 4, "#B8B8B8", 0.8, 1)
     N("rectangle", nav, x=46, y=34, width=56, height=26,
       props={"fill": TRANS, "stroke": ACC, "strokeWeight": 2, "cornerRadius": 2})
-    text(N, pv2, "camera magnifier 10× · auto stretch on (preview only)", 11, "#7A7A7A")
+    text(N, pv2, "camera magnifier 10× · auto stretch on (preview only)", 11, PV_INK)
 
     display_strip(N, leftcol2, PANE_W, "uv", black=0.06, white=0.52,
                   gamma="0.55", auto=True)
