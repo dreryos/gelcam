@@ -106,7 +106,8 @@ def build_rest(mcp, server="figcraft"):
     text(N, p, "not connected", 13, BAD)
     text(N, p, "Last seen: Canon EOS 100D, 11:38", 11.5, DIM, wrap=True)
     p2 = panel(N, side, "Detected applications")
-    for app_, st in [("EOS Utility", BAD), ("digiCamControl", DIM), ("Lightroom", DIM)]:
+    for app_, st in [("EOS Utility — running", BAD), ("digiCamControl — not running", DIM),
+                     ("Lightroom — not running", DIM)]:
         r = row(N, p2, gap=8, align="center")
         N("ellipse", r, width=8, height=8, props={"fill": st})
         text(N, r, app_, 12, INK if st == BAD else DIM)

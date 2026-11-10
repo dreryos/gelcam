@@ -14,8 +14,11 @@ W, H = 960, 640
 GAP = 80
 
 BG, PANEL, LINE = "#F2F2F2", "#FFFFFF", "#D8D8D8"
-INK, DIM, ACC, MUTEBG = "#1A1A1A", "#6B6B6B", "#2D6CDF", "#FAFAFA"
-OK, WARN, BAD = "#1E8E4E", "#B35C00", "#C0392B"
+INK, DIM, ACC, MUTEBG = "#1A1A1A", "#6B6B6B", "#2563D9", "#FAFAFA"
+OK, WARN, BAD = "#177A45", "#9E5100", "#C0392B"
+# Contrast checked 10 Nov 2026: OK, ACC, WARN, BAD, DIM >= 4.5:1 on BG, PANEL and the
+# selected tint #E7EEFB; captions inside the dark preview use PV_INK (6.9:1 on DARK).
+PV_INK = "#9E9E9E"
 NOTE_BG, NOTE_LINE, NOTE_INK = "#FFF8E6", "#E8D6A8", "#6B5518"
 DARK = "#141414"
 TRANS = "#00000000"
@@ -291,7 +294,8 @@ def textfield(N, parent, s, width=380, dim=False):
 def radio(N, parent, label, on):
     f = row(N, parent, gap=7)
     N("ellipse", f, width=13, height=13,
-      props={"fill": PANEL, "stroke": ACC if on else "#9A9A9A", "strokeWeight": 2 if on else 1})
+      props={"fill": PANEL, "stroke": ACC if on else "#9A9A9A", "strokeWeight": 5 if on else 1,
+             "strokeAlign": "inside"})   # selected = thick ring, readable without colour
     text(N, f, label, 13)
     return f
 
@@ -327,7 +331,7 @@ def preview(N, parent, w, h, label="živý náhled", radius=4):
     f = N("frame", parent, width=w, height=h, props={
         "fill": DARK, "cornerRadius": radius, "sizingH": "fixed", "sizingV": "fixed",
         "clip": True})
-    text(N, f, label, 12, "#6F6F6F")
+    text(N, f, label, 12, PV_INK)
     return f
 
 
@@ -438,7 +442,7 @@ def step2(N, T, c):
     band(N, pv, 268, 26, 150, 142, "#2B2B2B", 1.0, 3)
     for i, yy in enumerate([46, 76, 106, 136]):
         band(N, pv, 280, yy, 126, 8, "#C9C9C9", 0.85 - i * 0.18)
-    text(N, pv, T["preview_white"], 11, "#8A8A8A")
+    text(N, pv, T["preview_white"], 11, PV_INK)
 
     r = row(N, c, gap=8, align="center")
     text(N, r, T["lighting_now"], 12, INK)
@@ -474,7 +478,7 @@ def step3(N, T, c):
         band(N, nav, 32, yy, 32, 3, "#B8B8B8", 0.8, 1)
     N("rectangle", nav, x=29, y=22, width=36, height=17,
       props={"fill": TRANS, "stroke": ACC, "strokeWeight": 2, "cornerRadius": 2})
-    text(N, pv, T["mag10"], 10.5, "#8A8A8A")
+    text(N, pv, T["mag10"], 11, PV_INK)
 
     rightc = col(N, top, gap=12, sizingH="fill")
     p = panel(N, rightc, T["sharpness"])
@@ -501,7 +505,7 @@ def step4(N, T, c):
     band(N, pv, 92, 30, 146, 170, "#1E1E1E", 1.0, 3)
     for i, yy in enumerate([52, 82, 112, 142, 172]):
         band(N, pv, 100, yy, 130, 9, "#E6B9B9", 0.95 - i * 0.16)
-    text(N, pv, T["test_raw"], 11, "#8A8A8A")
+    text(N, pv, T["test_raw"], 11, PV_INK)
 
     rightc = col(N, top, gap=12, sizingH="fill")
     histogram(N, rightc, 330, 96)

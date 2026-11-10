@@ -56,9 +56,8 @@ def build_tools(mcp, server="figcraft"):
     lc = col(N, body, gap=12, sizingH="fill")
     pv = N("frame", lc, width=440, height=294, props={
         "cornerRadius": 4, "clip": True, "sizingH": "fixed", "sizingV": "fixed",
-        "layout": "vertical", "padding": 10, "fills": [{"type": "radialGradient", "stops": ["#E9B7A0", "#9C6655"]}]})
-    text(N, pv, "last flat, R channel — corners 74 % of centre", 11.5, "#FFFFFF",
-         opacity=0.85)
+        "fills": [{"type": "radialGradient", "stops": ["#E9B7A0", "#9C6655"]}]})
+    text(N, lc, "last flat, R channel — corners 74 % of centre", 11.5, DIM)
     g = row(N, lc, gap=30, align="min")
     stat(N, g, "Centre, R", "8 650 ADU · 64 %")
     stat(N, g, "Corners", "74 % of centre")
@@ -159,7 +158,7 @@ def build_tools(mcp, server="figcraft"):
 
     def expo(r):
         dropdown(N, r, "ISO 100", 100)
-        dropdown(N, r, "5\"", 80)
+        dropdown(N, r, "4\"", 80)
         dropdown(N, r, "f/8", 80)
     field_row(N, p, "Start exposure", expo, label_w=130)
     field_row(N, p, "Frames", lambda r: dropdown(N, r, "8", 80), label_w=130)
@@ -185,6 +184,7 @@ def build_tools(mcp, server="figcraft"):
         "fill": PANEL, "stroke": LINE, "strokeWeight": 1, "cornerRadius": 6,
         "layout": "vertical", "gap": 7, "padding": 14, "sizingH": "fill",
         "sizingV": "fill", "clip": True})
+    level = {OK: "info", DIM: "info", WARN: "warning", BAD: "error"}
     for t, lvl, msg in [
             ("11:36:02", OK, "Connected: Canon EOS 100D, quality RAW"),
             ("11:36:02", DIM, "Allowed values: ISO 100–12800, 30\"–1/4000, f/5.6–f/36"),
@@ -199,6 +199,7 @@ def build_tools(mcp, server="figcraft"):
         rr = row(N, lg, gap=10, align="center")
         text(N, rr, t, 11.5, DIM, width=62)
         N("ellipse", rr, width=7, height=7, props={"fill": lvl})
+        text(N, rr, level[lvl], 11.5, lvl if lvl in (WARN, BAD) else DIM, width=56)
         text(N, rr, msg, 12, BAD if lvl == BAD else INK)
 
     rc = col(N, body, gap=12, width=250, sizingH="fixed")
