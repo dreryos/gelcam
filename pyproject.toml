@@ -1,9 +1,24 @@
 [project]
 name = "gelcam"
 version = "0.1.0"
-description = "Tethering and gel image processing for the Canon EOS 100D on Windows"
+description = "Tethered capture and quantification-grade processing of agarose gel images with a Canon EOS 100D"
 readme = "README.md"
 requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Marek Földi" }]
+keywords = ["agarose-gel", "electrophoresis", "canon", "edsdk", "tethered-capture",
+            "image-stacking", "flat-field", "dark-frame", "raw", "microscopy"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Win32 (MS Windows)",
+    "Intended Audience :: Science/Research",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Image Processing",
+]
+
 dependencies = [
     "numpy>=1.26",
     "pillow>=10.0",
@@ -13,6 +28,10 @@ dependencies = [
     "tifffile>=2024.1",
     "opencv-python-headless>=4.9",
 ]
+
+[project.urls]
+Repository = "https://github.com/dreryos/gelcam"
+Issues = "https://github.com/dreryos/gelcam/issues"
 
 [project.scripts]
 gelcam = "gelcam.__main__:main"
