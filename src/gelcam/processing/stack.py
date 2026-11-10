@@ -7,13 +7,16 @@ from collections.abc import Callable
 
 import numpy as np
 
-# 1.4826 (MAD -> sigma) x 1.9: small-N correction, keeps Gaussian rejections ~1 % at N=8
-_MAD_TO_SIGMA = np.float32(1.4826 * 1.9)
-_MIN_SCALE = np.float32(0.5)  # ADU floor so constant pixels do not reject everything
+SIGMA = 3.0
+ITERATIONS = 3
+MAD_FACTOR = 1.4826 * 1.9  # MAD -> sigma (1.4826) x 1.9: small-N correction, keeps Gaussian rejections ~1 % at N=8
+SCALE_FLOOR_ADU = 0.5  # floor so constant pixels do not reject everything
+_MAD_TO_SIGMA = np.float32(MAD_FACTOR)
+_MIN_SCALE = np.float32(SCALE_FLOOR_ADU)
 
 #: Parameters recorded in metadata.json so every processing step is reproducible.
-CLIP_METHOD = {"method": "sigma-clipped mean", "centre": "median",
-               "scale": "1.4826 * 1.9 * MAD", "scale_floor_adu": float(_MIN_SCALE)}
+CLIP_METHOD = {"method": "sigma-clipped mean", "centre": "median", "scale": "MAD", "mad_factor": MAD_FACTOR,
+               "scale_floor_adu": SCALE_FLOOR_ADU, "sigma": SIGMA, "iterations": ITERATIONS}
 
 
 def _nanmedian(a: np.ndarray) -> np.ndarray:
@@ -23,7 +26,7 @@ def _nanmedian(a: np.ndarray) -> np.ndarray:
 
 
 def sigma_clip_mean(
-    stack: np.ndarray, sigma: float = 3.0, iterations: int = 3, tile_rows: int = 256,
+    stack: np.ndarray, sigma: float = SIGMA, iterations: int = ITERATIONS, tile_rows: int = 256,
     check: Callable[[], None] | None = None,
 ) -> tuple[np.ndarray, int]:
     """Mean of `stack` (N, H, W) after iterative rejection around the median, with a robust (MAD) scale so the outliers

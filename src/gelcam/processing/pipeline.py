@@ -23,7 +23,7 @@ from .binning import bin2x2
 from .calib import calibrate, master_dark, master_flat
 from .export import write_preview_png, write_result_tiff
 from .framestack import FrameStack, build_stack, plane_shape
-from .stack import CLIP_METHOD, sigma_clip_mean
+from .stack import CLIP_METHOD, ITERATIONS, SIGMA, sigma_clip_mean
 
 TILE_ROWS = 64
 BLOCK = 64
@@ -122,7 +122,9 @@ def process(
 ) -> PipelineResult:
     """Runs the pipeline. Work files live in a private `work-*` directory (inside `work_dir` or `out_dir`) that is
     removed afterwards; `work_dir` itself and anything else in it is never touched. Outputs are staged and published
-    without overwriting, both or neither. `cancel` is polled between frames and tiles (ProcessingCancelled)."""
+    without overwriting, both or neither. `cancel` is polled between frames and tiles and once more immediately
+    before publishing (ProcessingCancelled). Once publishing has started the run completes atomically (both outputs,
+    or rollback on error) and returns normally even if `cancel` is set meanwhile."""
     if not lights:
         raise ValueError("No light frames given")
     if not darks:
@@ -178,7 +180,6 @@ def process(
             raise ValueError(f"Dark shape {dk.array.shape[1:]} differs from light shape {shape}")
         dark = master_dark(dk.array, TILE_ROWS, check)
         steps.append({"step": "master_dark", "frames": [Path(p).name for p in darks], **CLIP_METHOD,
-                      "sigma": 3.0, "iterations": 3,
                       "median_adu": float(np.median(dark))})
         dk.discard()
 
@@ -192,7 +193,7 @@ def process(
                                         check=check)
             steps.append({"step": "master_flat", "flats": [Path(p).name for p in flats],
                           "flat_darks": [Path(p).name for p in flat_darks], "clipped_pixels": clipped,
-                          **CLIP_METHOD, "sigma": 3.0, "iterations": 3})
+                          **CLIP_METHOD})
             fl.discard()
             fd.discard()
         else:
@@ -231,9 +232,9 @@ def process(
         stats["shift_max_px"] = max(max(abs(a), abs(b)) for a, b in shifts)
 
         report("Stacking", 0.65)
-        result, rejected = sigma_clip_mean(cal, sigma=3.0, iterations=3, tile_rows=TILE_ROWS, check=check)
+        result, rejected = sigma_clip_mean(cal, SIGMA, ITERATIONS, tile_rows=TILE_ROWS, check=check)
         all_sat = int(np.isnan(result).sum())
-        steps.append({"step": "stack", **CLIP_METHOD, "sigma": 3.0, "iterations": 3,
+        steps.append({"step": "stack", **CLIP_METHOD,
                       "frames": n, "rejected_samples": rejected,
                       "rejected_fraction": rejected / float(cal.size),
                       "saturated_samples_excluded": sat_samples, "saturated_in_all_frames": all_sat})
@@ -266,6 +267,7 @@ def process(
         staged = stage / "result.tif", stage / "preview.png"
         export_steps = [{"step": "export_result", **write_result_tiff(staged[0], result)},
                         {"step": "export_preview", **write_preview_png(staged[1], result)}]
+        check()  # last cancellation point; from here on the run completes
         published: list[Path] = []
         try:  # both or neither
             for src, dst in zip(staged, (result_path, preview_path)):
@@ -299,7 +301,8 @@ def process_gel_folder(
     """Processes a wizard-made gel folder in place and records the steps in metadata.json.
 
     A `.processing.lock` file keeps two runs from working on the same folder; if the final metadata write fails,
-    the published outputs are rolled back.
+    the published outputs are rolled back. Cancellation is honoured up to the start of publishing; after that the
+    run completes (outputs + metadata, status "processed") and is returned normally even if `cancel` is set.
     """
     from ..storage.gel_folder import write_metadata
 
