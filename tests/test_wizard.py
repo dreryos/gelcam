@@ -226,6 +226,55 @@ def test_process_button_writes_result(env):
     assert meta["status"] == "processed" and meta["processing"] and meta["result"] == "result.tif"
 
 
+def _to_process_step(app, wiz):
+    wiz.gel_name.setText("proc")
+    wiz.btn_next.click()
+    for _ in range(4):
+        wiz.btn_next.click()
+    assert _wait(app, lambda: wiz.applied)
+    _series(app, wiz, 4)
+    wiz.btn_next.click()
+
+
+def _record_boxes(monkeypatch):
+    calls = []
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: calls.append(("question", a[2])) or QMessageBox.StandardButton.Yes)
+    monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: calls.append(("information", a[2])))
+    return calls
+
+
+def test_reject_after_processing_has_no_pending_wording(env, monkeypatch):
+    app, _ctrl, _cam, wiz, _sent, _root = env
+    calls = _record_boxes(monkeypatch)
+    _to_process_step(app, wiz)
+    wiz.btn_process.click()
+    assert _wait(app, lambda: wiz.processed, timeout=60)
+    wiz.reject()
+    assert wiz.result() == wiz.DialogCode.Rejected
+    assert not any("pending" in text for _, text in calls)
+
+
+def test_late_cancel_shows_results_kept(env, monkeypatch):
+    from gelcam.ui import wizard
+    app, _ctrl, _cam, wiz, _sent, _root = env
+    calls = _record_boxes(monkeypatch)
+    real = wizard.process_gel_folder
+
+    def late(folder, progress=None, cancel=None):
+        while not cancel.is_set():  # finish only after the cancel was requested
+            time.sleep(0.01)
+        return real(folder, progress)  # no cancel: the run completes
+    monkeypatch.setattr(wizard, "process_gel_folder", late)
+    _to_process_step(app, wiz)
+    folder = wiz.folder
+    wiz.btn_process.click()
+    wiz.reject()
+    assert wiz.result() == wiz.DialogCode.Rejected
+    kept = [c for c in calls if c[0] == "information" and "results were kept" in c[1]]
+    assert len(kept) == 1
+    assert (folder / "result.tif").exists() and (folder / "preview.png").exists()
+
+
 def test_profile_and_uv_frozen_after_first_frame(env):
     app, _ctrl, _cam, wiz, _sent, _root = env
     assert wiz.dye.isEnabled() and wiz.uv100.isEnabled()
