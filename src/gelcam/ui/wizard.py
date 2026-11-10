@@ -95,6 +95,7 @@ class GelWizard(QDialog):
         self._live_at_open = controller.live
         self._closed = False
         self._processing = False
+        self._proc_out: object = None  # worker result, readable even if the dialog closes first
         self._future: Future[None] | None = None
         self._cancel = threading.Event()
         self._metadata_written = False
@@ -725,6 +726,7 @@ class GelWizard(QDialog):
                     folder, lambda msg, f: self._emit(self._proc_progress, msg), cancel=cancel)
             except Exception as exc:  # noqa: BLE001 - reported in the dialog
                 out = exc
+            self._proc_out = out
             self._emit(self._proc_done, out)
 
         self._future = self._executor.submit(work)
@@ -1077,7 +1079,7 @@ class GelWizard(QDialog):
         return bool(self.test_frames or self.light_frames or self.dark_frames or self._batch)
 
     def reject(self) -> None:
-        if self._frames_taken() and not self._closed:
+        if self._frames_taken() and not self._closed and not self.processed:
             if self._metadata_written:
                 msg = self.tr("Frames and metadata.json stay in the gel folder (status: captured; processing "
                               "pending). Running processing will be stopped. Cancel anyway?")
@@ -1100,11 +1102,16 @@ class GelWizard(QDialog):
         while True:
             try:
                 fut.result(timeout=0.05)
-                return
+                break
             except FutureTimeout:
                 QApplication.processEvents(QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
             except BaseException:  # noqa: BLE001 - the worker reports its own errors
                 return
+        out = self._proc_out
+        if out is not None and not isinstance(out, BaseException):  # passed the publishing boundary: completed
+            self.processed = True
+            QMessageBox.information(self, self.tr("Cancel"),
+                                    self.tr("Processing had already finished; the results were kept."))
 
     def done(self, result: int) -> None:
         if not self._closed:

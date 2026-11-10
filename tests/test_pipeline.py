@@ -73,6 +73,12 @@ def basic(tmp_path_factory):
     return root, res, hashes, hot, steps
 
 
+def test_master_flat_step_uses_shared_clip_constants(basic):
+    from gelcam.processing import stack
+    step = next(s for s in basic[1].steps if s["step"] == "master_flat")
+    assert {k: step[k] for k in stack.CLIP_METHOD} == stack.CLIP_METHOD
+
+
 def test_noise_drops_sqrt_n(basic):
     ratio = basic[1].stats["background_noise_ratio"]
     assert 0.2 < ratio < 0.32  # 1/sqrt(16) = 0.25
