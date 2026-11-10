@@ -643,7 +643,8 @@ class MainWindow(QMainWindow):
     def _open_wizard(self) -> None:
         from .wizard import GelWizard
 
-        GelWizard(self.ctrl, self.out_dir, self.light, self).show()
+        self._wizard = GelWizard(self.ctrl, self.out_dir, self.light, self)
+        self._wizard.open()  # window-modal: no settings/capture interleaving with a series
 
     # --- live frames and display (preview only; the frame from the controller is never modified) ---
     def _on_frame(self, frame: np.ndarray) -> None:

@@ -80,6 +80,7 @@ class GelWizard(QDialog):
         self._frame_n = 0
         self._batch: dict[str, Any] | None = None
         self._box: QMessageBox | None = None
+        self._box_btns: tuple[QAbstractButton, QAbstractButton] | None = None
         self._test_dir: Path | None = None
         self._live_at_open = controller.live
         self._closed = False
@@ -761,12 +762,20 @@ class GelWizard(QDialog):
             self.ctrl.measure_file(path, self.profile.channel)
             return
         b = self._batch
-        if b is None or b["paused"] or path.parent != b["dest"]:
+        if b is None or path.parent != b["dest"]:
             return
-        b["got"].append(path)
+        b["got"].append(path)  # also while paused: the file is on disk
         if b["kind"] == "light":
             self.ctrl.measure_file(path, self.profile.channel)
         self._progress()
+        if b["paused"]:
+            k = len(b["got"])  # in-flight capture finished after the interruption
+            if self._box_btns is not None:
+                resume, use = self._box_btns
+                resume.setText(self.tr("Resume from frame {0}").format(k + 1))
+                use.setText(self.tr("Use the {0} frames").format(k))
+                use.setVisible(True)
+            return
         if len(b["got"]) >= b["total"]:
             self._batch_done()
         else:
@@ -864,7 +873,9 @@ class GelWizard(QDialog):
             + " " + self.tr("{0} frames are downloaded and kept; exposure and focus are unchanged.").format(k))
         resume = box.addButton(self.tr("Resume from frame {0}").format(k + 1), QMessageBox.ButtonRole.AcceptRole)
         again = box.addButton(self.tr("Start over"), QMessageBox.ButtonRole.DestructiveRole)
-        use = box.addButton(self.tr("Use the {0} frames").format(k), QMessageBox.ButtonRole.ActionRole) if k else None
+        use = box.addButton(self.tr("Use the {0} frames").format(k), QMessageBox.ButtonRole.ActionRole)
+        use.setVisible(bool(k))
+        self._box_btns = (resume, use)
         box.setDefaultButton(resume)
         box.buttonClicked.connect(lambda btn: self._interrupt_choice(btn, resume, again, use, lost))
         self._box = box
@@ -875,6 +886,7 @@ class GelWizard(QDialog):
         b = self._batch
         if b is None:
             return
+        self._box_btns = None
         if btn is use:
             b["total"] = len(b["got"])
             return self._batch_done()
@@ -899,6 +911,8 @@ class GelWizard(QDialog):
         b = self._batch
         if b is None:
             return
+        if len(b["got"]) >= b["total"]:  # the in-flight capture completed the batch
+            return self._batch_done()
         for prop, code in self.codes.items():  # restore exposure after a reconnect
             self.ctrl.set_value(prop, code)
         self.ctrl.capture(b["dest"])
@@ -966,6 +980,6 @@ class GelWizard(QDialog):
                     pass
             if self.idx == 2:
                 self.ctrl.set_zoom(1)
-            if self._live_at_open and not self.ctrl.live:
+            if self._live_at_open:  # FIFO on the camera thread: runs after any queued stop
                 self.ctrl.set_live_view(True)
         super().done(result)
