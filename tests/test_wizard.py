@@ -224,3 +224,23 @@ def test_process_button_writes_result(env):
     assert wiz.result() == wiz.DialogCode.Accepted
     meta = json.loads((folder / "metadata.json").read_text())
     assert meta["status"] == "processed" and meta["processing"] and meta["result"] == "result.tif"
+
+
+def test_profile_and_uv_frozen_after_first_frame(env):
+    app, _ctrl, _cam, wiz, _sent, _root = env
+    assert wiz.dye.isEnabled() and wiz.uv100.isEnabled()
+    wiz.dye.setCurrentIndex(1)  # allowed before any frame
+    wiz.uv100.setChecked(True)
+    chosen = wiz.dye.currentData()
+    for _ in range(5):  # -> step 6
+        wiz.btn_next.click()
+    assert _wait(app, lambda: wiz.applied)
+    _series(app, wiz, 4)
+    assert not wiz.dye.isEnabled() and not wiz.uv70.isEnabled() and not wiz.uv100.isEnabled()
+    assert wiz.freeze_note.isHidden() is False
+    wiz.dye.setEnabled(True)  # even a forced change does not reach the metadata
+    wiz.dye.setCurrentIndex(0)
+    wiz.uv70.setChecked(True)
+    meta = wiz._metadata()
+    assert meta["profile"]["name"] == chosen.name and meta["uv_level"] == 100
+    assert wiz.profile is chosen

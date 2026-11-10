@@ -1,14 +1,19 @@
 import hashlib
 import json
+import os
+import threading
+import types
 from pathlib import Path
 
 import numpy as np
 import pytest
 
 from gelcam.processing import framestack
-from gelcam.processing.pipeline import process, process_gel_folder
+from gelcam.processing import pipeline
+from gelcam.processing.pipeline import ProcessingCancelled, process, process_gel_folder
 from gelcam.processing.raw_io import RawFrame
-from gelcam.testing.synthetic import SyntheticGel, expose
+from gelcam.storage import gel_folder
+from gelcam.testing.synthetic import SIM_WHITE, SyntheticGel, expose
 
 GEL = SyntheticGel(vignetting=0.4)
 SIG = GEL.signal()
@@ -144,6 +149,7 @@ def test_process_gel_folder_and_no_overwrite(tmp_path):
     out = json.loads((tmp_path / "metadata.json").read_text())
     assert out["status"] == "processed" and out["gel_name"] == "x" and out["result"] == "result.tif"
     assert [s["step"] for s in out["processing"]] == [s["step"] for s in res.steps]
+    assert not (tmp_path / ".processing.lock").exists()
     assert "background_noise_ratio" in out["stats"]
     with pytest.raises(FileExistsError):
         process_gel_folder(tmp_path)
@@ -180,3 +186,171 @@ def test_real_data_r_channel(tmp_path):
     res = process(sorted(_SCENE.glob("*.CR2"))[:8], sorted(_DARK.glob("*.CR2"))[:8], "R", tmp_path)
     assert read_tif(res.result).shape == (1728, 2592)
     assert 0.35 < res.stats["background_noise_ratio"] < 0.55  # 8 lights; the median master dark of 8 adds common noise
+
+
+def _gel(tmp_path, n=3):
+    lights, darks, *_ = make_set(tmp_path, n=n, flat=False)
+    meta = {"profile": {"channel": "R"}, "light_frames": [str(p) for p in lights],
+            "dark_frames": [p.relative_to(tmp_path).as_posix() for p in darks], "flat": "skipped",
+            "processing": [], "status": "captured; processing pending", "gel_name": "x"}
+    (tmp_path / "metadata.json").write_text(json.dumps(meta))
+    return meta
+
+
+def _leftovers(folder):
+    return [p.name for p in folder.iterdir() if p.name.startswith((".stage-", "work-", ".processing", ".metadata-"))]
+
+
+def test_saturated_samples_excluded_from_result(tmp_path):
+    rng = np.random.default_rng(4)
+    tex = rng.normal(1000, 30, (80, 96)).astype(np.float32)
+    planes = [np.clip(np.round(tex + rng.normal(0, 2, tex.shape) + i), 0, 60000).astype(np.uint16) for i in range(8)]
+    band, allsat = (slice(10, 14), slice(10, 20)), (slice(70, 72), slice(5, 15))
+    for i in range(3):
+        planes[i][band] = SIM_WHITE
+    for p in planes:
+        p[allsat] = SIM_WHITE
+    lights = [_save(tmp_path / "raw", "L", i, p) for i, p in enumerate(planes)]
+    darks = [_save(tmp_path / "calib", "D", i, np.zeros((80, 96), np.uint16)) for i in range(3)]
+    res = process(lights, darks, "R", tmp_path / "out")
+    img = read_tif(res.result)
+    expected = np.mean([planes[i][band].astype(np.float64) for i in range(3, 8)], axis=0)
+    assert np.abs(img[band].astype(np.float64) - expected).max() <= 1.0  # uint16 rounding only
+    assert (img[allsat] == 65535).all()
+    export = next(s for s in res.steps if s["step"] == "export_result")
+    assert export["saturated_in_all_frames"] == 20 and export["clipped_high"] == 0
+    stack = next(s for s in res.steps if s["step"] == "stack")
+    assert stack["saturated_samples_excluded"] == 3 * 40 + 8 * 20 and res.stats["saturated_in_all_frames"] == 20
+
+
+def test_symlinked_metadata_is_replaced_not_written_through(tmp_path):
+    gel, outside = tmp_path / "gel", tmp_path / "outside.json"
+    gel.mkdir()
+    meta = _gel(gel)
+    outside.write_text(json.dumps(meta))
+    (gel / "metadata.json").unlink()
+    try:
+        (gel / "metadata.json").symlink_to(outside)
+    except (OSError, NotImplementedError):
+        pytest.skip("symlinks not available")
+    process_gel_folder(gel)
+    assert json.loads(outside.read_text()) == meta
+    assert not (gel / "metadata.json").is_symlink()
+    assert json.loads((gel / "metadata.json").read_text())["status"] == "processed"
+
+
+def test_caller_work_dir_survives(tmp_path):
+    lights, darks, *_ = make_set(tmp_path, n=3, flat=False)
+    wd = tmp_path / "mywork"
+    wd.mkdir()
+    (wd / "keep.txt").write_text("mine")
+    process(lights, darks, "R", tmp_path / "out", work_dir=wd)
+    assert (wd / "keep.txt").read_text() == "mine" and list(wd.iterdir()) == [wd / "keep.txt"]
+
+
+def test_failed_preview_leaves_nothing_and_retry_works(tmp_path, monkeypatch):
+    meta = _gel(tmp_path)
+    with monkeypatch.context() as m:
+        m.setattr(pipeline, "write_preview_png", lambda *a, **k: (_ for _ in ()).throw(OSError("disk full")))
+        with pytest.raises(OSError, match="disk full"):
+            process_gel_folder(tmp_path)
+    assert not (tmp_path / "result.tif").exists() and not (tmp_path / "preview.png").exists()
+    assert _leftovers(tmp_path) == []
+    assert json.loads((tmp_path / "metadata.json").read_text()) == meta
+    process_gel_folder(tmp_path)
+    assert (tmp_path / "result.tif").exists() and (tmp_path / "preview.png").exists()
+
+
+def test_second_publish_failure_rolls_back_first(tmp_path, monkeypatch):
+    lights, darks, *_ = make_set(tmp_path, n=3, flat=False)
+    real, calls = pipeline._publish, []
+
+    def flaky(src, dst):
+        calls.append(dst.name)
+        if len(calls) == 2:
+            raise OSError("boom")
+        real(src, dst)
+
+    monkeypatch.setattr(pipeline, "_publish", flaky)
+    with pytest.raises(OSError, match="boom"):
+        process(lights, darks, "R", tmp_path / "out")
+    assert calls == ["result.tif", "preview.png"]
+    assert sorted(p.name for p in (tmp_path / "out").iterdir()) == []
+
+
+def test_metadata_write_failure_rolls_back_outputs(tmp_path, monkeypatch):
+    _gel(tmp_path)
+    monkeypatch.setattr(gel_folder, "write_metadata", lambda *a, **k: (_ for _ in ()).throw(OSError("ro")))
+    with pytest.raises(OSError, match="ro"):
+        process_gel_folder(tmp_path)
+    assert not (tmp_path / "result.tif").exists() and not (tmp_path / "preview.png").exists()
+    assert _leftovers(tmp_path) == []
+
+
+def test_publish_never_overwrites_symlink(tmp_path):
+    src, outside = tmp_path / "src", tmp_path / "outside"
+    src.write_bytes(b"new")
+    outside.write_bytes(b"keep")
+    try:
+        (tmp_path / "dst").symlink_to(outside)
+    except (OSError, NotImplementedError):
+        pytest.skip("symlinks not available")
+    with pytest.raises(FileExistsError):
+        pipeline._publish(src, tmp_path / "dst")
+    assert outside.read_bytes() == b"keep"
+
+
+def test_lock_blocks_concurrent_run_and_is_released(tmp_path):
+    _gel(tmp_path)
+    inner: list[Exception] = []
+
+    def progress(msg, frac):
+        if not inner:
+            try:
+                process_gel_folder(tmp_path)
+            except RuntimeError as exc:
+                inner.append(exc)
+
+    process_gel_folder(tmp_path, progress)
+    assert len(inner) == 1 and "already running" in str(inner[0])
+    assert not (tmp_path / ".processing.lock").exists()
+
+
+def test_stale_lock_refuses_and_stays(tmp_path):
+    _gel(tmp_path)
+    (tmp_path / ".processing.lock").write_text("")
+    with pytest.raises(RuntimeError, match="processing.lock"):
+        process_gel_folder(tmp_path)
+    assert (tmp_path / ".processing.lock").exists() and not (tmp_path / "result.tif").exists()
+
+
+def test_duplicate_and_too_many_frames_rejected(tmp_path):
+    lights, darks, *_ = make_set(tmp_path, n=3, flat=False)
+    with pytest.raises(ValueError, match="Duplicate"):
+        process([lights[0], lights[1], lights[0]], darks, "R", tmp_path / "o")
+    with pytest.raises(ValueError, match="Duplicate"):
+        process(lights, [darks[0], darks[0]], "R", tmp_path / "o")
+    many = [tmp_path / f"x{i}.npy" for i in range(pipeline.MAX_FRAMES + 1)]
+    with pytest.raises(ValueError, match="Too many"):
+        process(many, darks, "R", tmp_path / "o")
+    with pytest.raises(ValueError, match="Too many"):
+        process(lights, many, "R", tmp_path / "o")
+
+
+def test_disk_space_checked_before_building(tmp_path, monkeypatch):
+    lights, darks, *_ = make_set(tmp_path, n=3, flat=False)
+    seen = []
+    monkeypatch.setattr(pipeline.shutil, "disk_usage", lambda p: seen.append(p) or types.SimpleNamespace(free=1000))
+    with pytest.raises(OSError, match="Not enough free disk space"):
+        process(lights, darks, "R", tmp_path / "out")
+    assert seen == [tmp_path / "out"] and _leftovers(tmp_path / "out") == []
+
+
+def test_cancel_after_first_progress(tmp_path):
+    meta = _gel(tmp_path)
+    cancel = threading.Event()
+    with pytest.raises(ProcessingCancelled):
+        process_gel_folder(tmp_path, lambda m, f: cancel.set(), cancel=cancel)
+    assert not (tmp_path / "result.tif").exists() and not (tmp_path / "preview.png").exists()
+    assert _leftovers(tmp_path) == []
+    assert json.loads((tmp_path / "metadata.json").read_text()) == meta

@@ -9,7 +9,9 @@ listener, so each one is filtered by the folder the wizard asked for.
 
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
+import threading
+from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeout
 from dataclasses import asdict
 from datetime import date
 from pathlib import Path
@@ -17,10 +19,10 @@ from typing import Any
 
 import numpy as np
 
-from PySide6.QtCore import QTimer, QUrl, Qt, Signal
+from PySide6.QtCore import QEventLoop, QTimer, QUrl, Qt, Signal
 from PySide6.QtGui import QDesktopServices, QFont
 from PySide6.QtWidgets import (
-    QAbstractButton, QButtonGroup, QCheckBox, QComboBox, QDialog, QFrame, QGridLayout, QHBoxLayout,
+    QAbstractButton, QApplication, QButtonGroup, QCheckBox, QComboBox, QDialog, QFrame, QGridLayout, QHBoxLayout,
     QLabel, QLineEdit, QMessageBox, QPlainTextEdit, QProgressBar, QPushButton, QRadioButton,
     QScrollArea, QStackedWidget, QVBoxLayout, QWidget,
 )
@@ -30,7 +32,7 @@ from ..camera import FocusStep, Prop
 from ..camera.values import av_fnumber, av_label, iso_label, iso_value, tv_code_at_most, tv_label, tv_seconds
 from ..processing.exposure import ExposureMeasurement, propose_seconds
 from ..processing.focus import sharpness_rgb
-from ..processing.pipeline import process_gel_folder
+from ..processing.pipeline import ProcessingCancelled, process_gel_folder
 from ..storage.gel_folder import create_gel_folder, write_metadata
 from . import theme
 from .controller import CameraController
@@ -93,6 +95,9 @@ class GelWizard(QDialog):
         self._live_at_open = controller.live
         self._closed = False
         self._processing = False
+        self._future: Future[None] | None = None
+        self._cancel = threading.Event()
+        self._frozen: tuple[DyeProfile, int] | None = None  # (profile, UV level) at the first frame
         self.processed = False
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="gelcam-process")
         self._proc_progress.connect(self._on_proc_progress)
@@ -230,6 +235,10 @@ class GelWizard(QDialog):
         grid.addWidget(self.note, 4, 1)
         grid.setColumnStretch(1, 1)
         card.body.addLayout(grid)
+        self.freeze_note = QLabel(self.tr("Dye and UV level are fixed after the first frame."))
+        self.freeze_note.setProperty("role", "dim")
+        self.freeze_note.hide()
+        card.body.addWidget(self.freeze_note)
         lay.addWidget(card)
         lay.addWidget(Note(self.tr("The profile sets the colour channel and the default exposure.") + "\n"
                            + self.tr("Changing the zoom or the UV level means a new calibration — a flat "
@@ -241,7 +250,19 @@ class GelWizard(QDialog):
 
     @property
     def profile(self) -> DyeProfile:
-        return self.dye.currentData()
+        return self._frozen[0] if self._frozen else self.dye.currentData()
+
+    @property
+    def uv_level(self) -> int:
+        return self._frozen[1] if self._frozen else (100 if self.uv100.isChecked() else 70)
+
+    def _freeze(self) -> None:
+        """Profile and UV level belong to the frames: from the first one on they cannot change."""
+        if self._frozen is None:
+            self._frozen = (self.profile, self.uv_level)
+            for w in (self.dye, self.uv70, self.uv100):
+                w.setEnabled(False)
+            self.freeze_note.show()
 
     def _profile_changed(self) -> None:
         p = self.profile
@@ -472,6 +493,7 @@ class GelWizard(QDialog):
     def _take_test(self) -> None:
         assert self.folder is not None
         self._test_dir = self.folder / "raw" / "test"
+        self._freeze()
         self.btn_test.setEnabled(False)
         self.ctrl.capture(self._test_dir)
 
@@ -693,15 +715,17 @@ class GelWizard(QDialog):
         self.proc_label.setText(self.tr("Processing…"))
         self._update_nav()
         folder = self.folder
+        self._cancel = cancel = threading.Event()
 
         def work() -> None:
             try:
-                out: object = process_gel_folder(folder, lambda msg, f: self._emit(self._proc_progress, msg))
+                out: object = process_gel_folder(
+                    folder, lambda msg, f: self._emit(self._proc_progress, msg), cancel=cancel)
             except Exception as exc:  # noqa: BLE001 - reported in the dialog
                 out = exc
             self._emit(self._proc_done, out)
 
-        self._executor.submit(work)
+        self._future = self._executor.submit(work)
 
     @staticmethod
     def _emit(sig: Any, value: object) -> None:
@@ -718,7 +742,10 @@ class GelWizard(QDialog):
         if self._closed:
             return
         self._processing = False
-        if isinstance(out, BaseException):
+        if isinstance(out, ProcessingCancelled):
+            self.proc_label.setText(self.tr("Cancelled"))
+            self.btn_process.setEnabled(True)
+        elif isinstance(out, BaseException):
             self.proc_label.setText("")
             self.btn_process.setEnabled(not isinstance(out, FileExistsError))
             self._show_error(self.tr("Processing failed: {0}").format(out))
@@ -896,6 +923,7 @@ class GelWizard(QDialog):
     # ------------------------------------------------------------------ frame batches
     def _start_batch(self, kind: str, dest: Path, total: int) -> None:
         self._batch = {"kind": kind, "dest": dest, "total": total, "got": [], "paused": False, "resume": False}
+        self._freeze()
         self.status.hide()
         self._progress()
         self._update_nav()
@@ -1010,7 +1038,7 @@ class GelWizard(QDialog):
         } if c else {}
         return {
             "profile": asdict(self.profile),
-            "uv_level": 100 if self.uv100.isChecked() else 70,
+            "uv_level": self.uv_level,
             "light_declared": self.light_declared,
             "lens": {"name": self.ctrl.lens.name, "focal_length_mm": self.ctrl.lens.focal_mm},  # from status_ready
             "gel_name": self.gel_name.text().strip() or "gel",
@@ -1052,8 +1080,27 @@ class GelWizard(QDialog):
                 return
         super().reject()
 
+    def _cancel_processing(self) -> None:
+        """Stops a running pipeline and waits until it has finished, so nothing is written after the dialog closed."""
+        fut = self._future
+        if fut is None or fut.done():
+            return
+        self._cancel.set()
+        self.proc_label.setText(self.tr("Cancelling…"))
+        for b in (self.btn_next, self.btn_back, self.btn_cancel, self.btn_process):
+            b.setEnabled(False)
+        while True:
+            try:
+                fut.result(timeout=0.05)
+                return
+            except FutureTimeout:
+                QApplication.processEvents(QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
+            except BaseException:  # noqa: BLE001 - the worker reports its own errors
+                return
+
     def done(self, result: int) -> None:
         if not self._closed:
+            self._cancel_processing()
             self._closed = True
             self._timer.stop()
             self._reconnect_timer.stop()

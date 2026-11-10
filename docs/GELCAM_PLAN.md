@@ -146,7 +146,7 @@ gelcam/
     processing/
       raw_io.py          # CR2 loading, black/white level, CFA pattern
       channel.py         # channel selection from the mosaic, no demosaicing
-      calib.py           # master dark (median), master flat, application
+      calib.py           # master dark (sigma-clipped mean), master flat, application
       align.py           # shift detection, alignment
       stack.py           # mean with sigma clipping
       binning.py
@@ -451,9 +451,9 @@ Formula:
 R = mean_σ( (L_i − D) / F̂ ),    F̂ = (F − D_F) / mean(F − D_F)
 ```
 
-- `L_i` light frames, `D` master dark (median of 8–16 darks with the same time, ISO and similar temperature), `F` master flat, `D_F` dark for the flat (or bias).
+- `L_i` light frames, `D` master dark (sigma-clipped mean of 8–16 darks with the same time, ISO and similar temperature; originally planned as a median, changed 10 Nov 2026 because the median has ~1.25× the noise and the master dark noise is common to every light frame), `F` master flat, `D_F` dark for the flat (or bias).
 - **Black level:** dark includes the black level, so `L − D` removes it. For the flat, `D_F` must be subtracted (or at least the black level from `raw.black_level_per_channel`), otherwise normalization will be distorted.
-- **Saturation:** pixels ≥ `raw.white_level` (or close) are flagged already in the light frames, before subtraction; a saturated band cannot be quantified.
+- **Saturation:** pixels ≥ `raw.white_level` (or close) are flagged already in the light frames, before subtraction, and those samples are excluded from the stack (NaN in the frame stack); a pixel saturated in every frame is written as 65535 and counted in `metadata.json`. A saturated band cannot be quantified.
 - **Channel selection:** `raw.raw_image_visible` + `raw.raw_colors_visible` (CFA colour indices). For R take R pixels, for G both G pixels (average 2×2 cell → half resolution). No interpolation.
 - **Sigma clipping:** e.g. 3σ along the frame axis, iteratively; removes flashes, cosmic rays and one-off shifts.
 - **Alignment:** `cv2.phaseCorrelate` on the channel; below 0.5 px no resampling.
@@ -701,7 +701,7 @@ Taken with `tools/capture_series.py` (only values from `allowed_values`; camera 
 - **Noise over time ≈ 7.3 ADU** (readout noise at ISO 100, same for R, G, B and independent of time up to 30 s).
 - **No increase of average dark current and no amp glow:** the mean after 30 s does not differ from bias. The background is uniform.
 - **Hot pixels:** about **120 pixels** are strongly hot (> 100 ADU above background) already at 8 s and their number does not change at 30 s; the number of "warm" pixels (> 20 ADU) however grows with time: 7 → 421 → 2228 (of 18.1 Mpx). Darks must therefore have the **same time as the light frames**; bias as a substitute for a dark is not enough.
-- **Consequence for the pipeline:** master dark = median of 8–16 darks (noise after median ~2.2 ADU), `D_F` for the flat can be taken from a dark of the same time; a single frame with noise ~7.3 ADU is the main source of error at weak signal, so stacking pays off.
+- **Consequence for the pipeline:** master dark = robust mean of 8–16 darks (noise ~7.3/√N ADU, i.e. ~1.8 ADU for 16; the median would give ~2.2 ADU), `D_F` for the flat can be taken from a dark of the same time; a single frame with noise ~7.3 ADU is the main source of error at weak signal, so stacking pays off.
 
 ### Measured flat and time series under white light (4 Nov 2026, 100D, ISO 100, f/8)
 
