@@ -107,3 +107,12 @@ def quality_label(code: int) -> str:
     if has_raw(code):
         return "RAW + JPEG"
     return "JPEG"
+
+
+def tv_code_at_most(allowed: list[int], seconds: float) -> int | None:
+    """Longest allowed shutter code up to `seconds` (+5 %); else the shortest one. Bulb is skipped."""
+    timed = [(s, c) for c in allowed if (s := tv_seconds(c)) is not None]
+    if not timed:
+        return None
+    fitting = [t for t in timed if t[0] <= seconds * 1.05]
+    return max(fitting)[1] if fitting else min(timed)[1]

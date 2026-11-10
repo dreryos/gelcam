@@ -11,6 +11,8 @@ can find them.
 
 from __future__ import annotations
 
+import struct
+
 # --- error codes (EDSDKErrors.h) ---
 EDS_ERR_OK = 0x00000000
 EDS_ERR_UNIMPLEMENTED = 0x00000001
@@ -37,6 +39,13 @@ kEdsPropID_ISOSpeed = 0x00000402
 kEdsPropID_Av = 0x00000405
 kEdsPropID_Tv = 0x00000406
 kEdsPropID_AEModeSelect = 0x00000436
+kEdsPropID_FocalLength = 0x00000409
+kEdsPropID_LensName = 0x0000040D
+kEdsPropID_LensStatus = 0x00000416
+kEdsDataType_UInt32 = 9
+kEdsDataType_Rational = 20
+kEdsDataType_UInt32_Array = 36
+kEdsDataType_Rational_Array = 37
 kEdsPropID_Evf_OutputDevice = 0x00000500
 kEdsPropID_Evf_Mode = 0x00000501
 kEdsPropID_Evf_Zoom = 0x00000507
@@ -103,6 +112,21 @@ CHECKED: dict[str, int] = {
     for name, value in globals().items()
     if (name.startswith("kEds") or name.startswith("EDS_ERR_")) and isinstance(value, int)
 }
+
+
+def decode_focal_length(data_type: int, raw: bytes) -> float | None:
+    """Focal length in mm from raw EDSDK property bytes (first element); None if unusable."""
+    if data_type in (kEdsDataType_UInt32, kEdsDataType_UInt32_Array) and len(raw) >= 4:
+        mm = float(struct.unpack_from("<I", raw)[0])
+    elif data_type in (kEdsDataType_Rational, kEdsDataType_Rational_Array) and len(raw) >= 8:
+        num, den = struct.unpack_from("<iI", raw)  # EdsRational: int32 numerator, uint32 denominator
+        if den == 0:
+            return None
+        mm = num / den
+    else:
+        return None
+    return mm if mm > 0 else None
+
 
 ERROR_MESSAGES: dict[int, str] = {
     EDS_ERR_DEVICE_NOT_FOUND: "Camera not found. Is it switched on and connected by USB cable?",

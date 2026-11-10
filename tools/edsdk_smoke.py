@@ -75,6 +75,16 @@ def main() -> int:
         run("aperture", lambda: values.av_label(int(cam.get(Prop.AV))))
         run("image quality", lambda: values.quality_label(int(cam.get(Prop.IMAGE_QUALITY))))
 
+        step("Lens")
+
+        def lens():
+            li = cam.lens_info()
+            return (f"name: {li.name or 'not reported'}, attached: "
+                    f"{'not reported' if li.attached is None else li.attached}, focal length: "
+                    f"{f'{li.focal_mm:g} mm' if li.focal_mm else 'not reported'}")
+
+        run("lens", lens)
+
         step("Allowed values")
         run("ISO", lambda: ", ".join(values.iso_label(v) for v in cam.allowed_values(Prop.ISO)))
         run("shutter", lambda: ", ".join(values.tv_label(v) for v in cam.allowed_values(Prop.TV)))

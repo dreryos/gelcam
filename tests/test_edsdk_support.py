@@ -87,3 +87,17 @@ def test_diritem_size_detection(tmp_path):
 def test_checked_constants_are_unique_names():
     assert "kEdsPropID_ISOSpeed" in C.CHECKED and "EDS_ERR_OK" in C.CHECKED
     assert "AE_MODE_MANUAL" not in C.CHECKED
+
+
+def test_decode_focal_length():
+    import struct
+
+    d = C.decode_focal_length
+    assert d(C.kEdsDataType_UInt32, struct.pack("<I", 35)) == 35.0
+    assert d(C.kEdsDataType_Rational, struct.pack("<iI", 700, 20)) == 35.0
+    arr = struct.pack("<iIiI", 55, 1, 18, 1)
+    assert d(C.kEdsDataType_Rational_Array, arr) == 55.0  # first element
+    assert d(C.kEdsDataType_UInt32_Array, struct.pack("<II", 18, 55)) == 18.0
+    assert d(C.kEdsDataType_Rational, struct.pack("<iI", 5, 0)) is None  # zero denominator
+    assert d(C.kEdsDataType_UInt32, b"\x01") is None  # too short
+    assert d(2, b"35\x00") is None  # string / unknown type

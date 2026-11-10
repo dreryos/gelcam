@@ -60,3 +60,17 @@ def read_raw(path: str | Path) -> RawFrame:
             white_level=int(raw.white_level),
             source=path.name,
         )
+
+
+def read_frame(path: str | Path) -> RawFrame:
+    """Like `read_raw`, but also accepts the .npy frames saved by `MockCamera.capture`."""
+    path = Path(path)
+    if path.suffix.lower() != ".npy":
+        return read_raw(path)
+    from ..testing.synthetic import SIM_BLACK, SIM_WHITE
+
+    mosaic = np.load(path).astype(np.uint16, copy=False)
+    h, w = mosaic.shape
+    pattern = np.array([[0, 1], [3, 2]], dtype=np.uint8)
+    colors = np.tile(pattern, (h // 2 + 1, w // 2 + 1))[:h, :w]
+    return RawFrame(mosaic, colors, "RGBG", (float(SIM_BLACK),) * 4, SIM_WHITE, path.name)

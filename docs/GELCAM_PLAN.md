@@ -352,6 +352,77 @@ body, footer with actions), built by `design/design_tools.py`; exports in `desig
 The page was built by `figcraft-cli` without an MCP host: `design/record_cli.py build_tools`
 records the builder as a `node.create` script, `figcraft-cli run --in … --out …` applies it.
 
+### Accessibility and readability audit of the mockups (10 Nov 2026)
+
+Every text layer was checked against its real background (nearest filled ancestor, opacity
+composited) for WCAG 2.2 AA contrast, plus minimum font size, colour-only states and
+consistency. Checklist taken from the ui-ux-pro guidelines (colour contrast, colour-only
+information, target size, focus states); their web/mobile design systems do not fit a
+PySide6 desktop instrument and were not used.
+
+Found and fixed (scripts and `gelcam-ui.figcraft`, exports regenerated):
+
+| Finding | Before | Fix |
+| --- | --- | --- |
+| "OK" green on light backgrounds | `#1E8E4E`, 3.7–4.2 : 1 | `OK = #177A45`, ≥ 4.8 : 1 |
+| Accent text on the selected tint `#E7EEFB` (toggles, current step) | `#2D6CDF`, 4.2 : 1 | `ACC = #2563D9`, 4.7 : 1; white on primary buttons 5.4 : 1 |
+| Captions inside the dark preview | `#6F6F6F`–`#8A8A8A`, 3.7–4.3 : 1 | `PV_INK = #9E9E9E`, 6.9 : 1 |
+| Text below 11 px ("AF point", magnifier caption) | 10–10.5 px | 11 px minimum |
+| Selected radio only a slightly thicker blue ring | colour + 1 px | 5 px inner ring — reads as a filled dot without colour |
+| Log level shown only by dot colour (L1) | colour only | level as text: info / warning / error |
+| Detected applications in LV3: running vs not running by colour | colour only | "— running" / "— not running" |
+| Caption over the gradient flat preview (C1) | 2.5 : 1 | moved under the image |
+| P1 start exposure 5 s vs EtBr profile 4 s in S1/W1 | inconsistent | 4 s |
+| Warning orange on the grey background (found by `tests/test_ui_theme.py`) | `#B35C00`, 4.1 : 1 | `WARN = #9E5100`, ≥ 5.0 : 1 |
+
+Accepted as is: disabled buttons (`#A8A8A8`, WCAG exempts inactive controls) and decorative
+glyphs (`·` separators, `▾` dropdown arrows).
+
+Rules for the Qt implementation that a mockup cannot show:
+
+- Colours come only from `src/gelcam/ui/theme.py` (same values as the `design_wizard.py`
+  constants); `tests/test_ui_theme.py` checks every text colour against every background, so a
+  new colour is added there together with its contrast check.
+- `theme.STYLESHEET` restores a visible focus border, which Qt drops for widgets styled by QSS.
+- Keep the default Qt keyboard focus indicator; every control must be reachable by Tab in
+  visual order, the primary action on Enter, Cancel on Esc.
+- Icon-only buttons (fine focus steps `«« »»`, zoom) get a tooltip and `accessibleName`
+  via `theme.icon_button()`; the test fails for any glyph-only button without them.
+- All user-facing strings through `self.tr()`; `.ts`/`.qm` files are generated later.
+- Minimum click target 24 × 24 px (WCAG 2.5.8); the mockup buttons are 27 px and taller.
+- Never encode a state only in colour: pair it with text or shape, as above.
+
+
+### UI prototype (10 Nov 2026)
+
+`uv run python -m gelcam --mock` runs the live view window (LV1–LV4) and the seven-step wizard
+over MockCamera. Structure: `ui/theme.py` (audited colours, stylesheet), `ui/widgets.py`
+(Card, Note, PreviewView, HistogramView, StatValue), `ui/preview.py` (display-only LUT,
+histogram, clipping), `ui/main_window.py`, `ui/wizard.py`; domain pieces
+`acquisition/profiles.py` (default dye profiles), `storage/gel_folder.py` (gel folder,
+metadata.json), `processing/focus.py` (variance of Laplacian), `processing/exposure.py`
+(measurement on RAW, exposure proposal capped at 30 s). The controller detects a lost
+connection from any failing camera call (also the frame loop), reconnects every 2 s and
+restores live view; measurements run on a second thread so the camera thread never waits on
+processing. MockCamera can simulate a missing camera (`available=False`) and an outage
+(`simulate_disconnect(seconds)`).
+
+The wizard saves light frames to `raw/`, test frames to `raw/test/`, darks to `calib/` and
+`metadata.json` with status "captured; processing pending" — it never writes a `result.tif`
+until the pipeline exists. "Start over" moves earlier frames to `discarded_N/`, never deletes
+them. What the prototype leaves out of the mockups is listed in `STATUS.md`.
+
+### Lens information (10 Nov 2026)
+
+`Camera.lens_info()` returns `LensInfo(name, attached, focal_mm)`; EDSDK reads
+`kEdsPropID_LensName` (0x40D), `kEdsPropID_LensStatus` (0x416) and `kEdsPropID_FocalLength`
+(0x409, decoded by data type: UInt32 or Rational, first element in mm). Each field is optional —
+**whether the 100D reports them on the camera object is not verified yet**; run
+`tools/edsdk_smoke.py` on Windows, it prints the lens step. The window shows lens and focal
+length in the Camera card, the wizard writes a `lens` block to `metadata.json` and shows the
+current focal length next to the "zoom at the marked position" check. If the 100D does report
+the focal length, the zoom check can become automatic (compare with the focal length stored
+with the flat field) instead of an operator checkbox.
 
 ### Dye profiles (default)
 
