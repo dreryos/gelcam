@@ -326,9 +326,31 @@ Mockups in `design/export/`, built by `design/design_errors.py`:
   `result.tif` is the file to quantify and `preview.png` carries the display settings.
 - `s1_settings` — language, root folder, defaults for a new gel, dye profile table.
 
-**Deliberately not designed:** the log window (plain text is enough), disk-full and write
-errors (the inline banner pattern covers them), and the first-run state before any calibration
-exists.
+**Deliberately not designed:** disk-full and write errors (the inline banner pattern covers
+them), and the first-run state before any calibration exists.
+
+### Calibration capture, dye profiles and log (designed 10 Nov 2026)
+
+Tool windows opened from step 5, Settings and the status bar. They share one shell (header,
+body, footer with actions), built by `design/design_tools.py`; exports in `design/export/`.
+
+- `c1_flat_capture` — taking a new flat: arrangement it will be valid for (zoom, UV level,
+  target, exposure — same as the gels), the last flat with centre level, corner falloff and
+  saturation, then progress of 16 flats followed by 16 darks for the flat. The flat is divided
+  out, so the target is only "centre at 50–80 %, nothing saturated", not a specific level.
+- `c2_dark_frames` — the interstitial after a series: turn off all light, progress, and a check
+  of the last dark (mean above bias, noise, hot pixels, light leak). Explains why darks are
+  taken now rather than from a library (hot pixels depend on sensor temperature, measured
+  4 Nov). "Skip, use stored darks" stays available but is not the default.
+- `p1_dye_profiles` — list of profiles and an editor: name, channel R/G, emission filter, UV
+  level, start exposure (dropdowns filled only from values the camera reports), frames, note.
+  Editing a profile never changes images already taken; `metadata.json` keeps the profile used.
+- `l1_log_about` — the log behind the status-bar link: level filter, search, one line per
+  event; next to it version, EDSDK and Python versions, camera, log folder
+  (`%APPDATA%\GelCam\logs`, one file per day, 30 days) and "Copy for support".
+
+The page was built by `figcraft-cli` without an MCP host: `design/record_cli.py build_tools`
+records the builder as a `node.create` script, `figcraft-cli run --in … --out …` applies it.
 
 
 ### Dye profiles (default)

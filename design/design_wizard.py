@@ -193,7 +193,7 @@ def make_N(mcp, server="figcraft"):
     def N(type, parent=None, **kw):
         if parent is not None:
             kw["parent"] = parent
-        if type == "frame":
+        if type == "frame" and "fills" not in kw.get("props", {}):
             kw.setdefault("props", {}).setdefault("fill", TRANS)
         r = mcp(server, "create_node", type=type, **kw)
         return r["id"] if isinstance(r, dict) and "id" in r else r
