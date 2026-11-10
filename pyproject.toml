@@ -1,7 +1,7 @@
 [project]
 name = "gelcam"
 version = "0.1.0"
-description = "Tethering a zpracování snímků gelů pro Canon EOS 100D na Windows"
+description = "Tethering and gel image processing for the Canon EOS 100D on Windows"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

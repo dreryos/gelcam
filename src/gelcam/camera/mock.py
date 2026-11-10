@@ -1,9 +1,9 @@
-"""Simulovaný foťák pro vývoj a testy bez připojeného 100D.
+"""Simulated camera for development and tests without a connected 100D.
 
-- live view: syntetický gel se šumem, lupa zvětšuje výřez,
-- ostření: simulované rozostření, které AF i kroky ostření zlepšují,
-- capture: kopíruje další soubor z `source_dir` (např. CR2 z testovacích sad),
-  nebo bez zdroje uloží syntetický 14bit snímek jako .npy.
+- live view: synthetic gel with noise, zoom enlarges the crop,
+- focus: simulated defocus that both AF and focus steps reduce,
+- capture: copies the next file from `source_dir` (e.g. CR2 from the test sets),
+  or without a source saves a synthetic 14-bit frame as .npy.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ import numpy as np
 from .base import CameraError, CameraInfo, FocusStep, Prop, check_allowed, ensure_raw_quality
 from ..testing.synthetic import SyntheticGel, expose, to_preview_rgb
 
-# Hodnoty, jaké nabízí 100D v režimu M (kódy EDSDK)
+# Values offered by the 100D in M mode (EDSDK codes)
 _ISO_CODES = [0x00, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, 0x78, 0x80]
 _TV_CODES = [0x0C, 0x10, 0x13, 0x15, 0x18, 0x1B, 0x1D, 0x20, 0x23, 0x25, 0x28, 0x2B, 0x2D, 0x30,
              0x33, 0x35, 0x38, 0x3B, 0x3D, 0x40, 0x43, 0x45, 0x48, 0x4B, 0x4D, 0x50, 0x53, 0x55,
@@ -28,7 +28,7 @@ _AV_CODES = [0x25, 0x28, 0x2B, 0x2D, 0x30, 0x33, 0x35, 0x38, 0x3B, 0x3D, 0x40, 0
              0x4B, 0x4D, 0x50]
 
 
-_QUALITY_CODES = [0x13FF0F, 0x12FF0F, 0x640013, 0x64FF0F]  # jako 100D: JPEG, RAW+JPEG, RAW
+_QUALITY_CODES = [0x13FF0F, 0x12FF0F, 0x640013, 0x64FF0F]  # as on the 100D: JPEG, RAW+JPEG, RAW
 
 
 class MockCamera:
@@ -46,10 +46,10 @@ class MockCamera:
         self._signal = self._gel.signal() * self._gel.flat_field()
         self._values: dict[Prop, int | str] = {
             Prop.ISO: 0x48, Prop.TV: 0x38, Prop.AV: 0x30, Prop.IMAGE_QUALITY: 0x64FF0F, Prop.AE_MODE: 3,
-            Prop.BATTERY: 100, Prop.PRODUCT_NAME: "Canon EOS 100D (simulace)",
+            Prop.BATTERY: 100, Prop.PRODUCT_NAME: "Canon EOS 100D (simulation)",
         }
 
-    # --- připojení ---
+    # --- connection ---
     def connect(self) -> CameraInfo:
         self._connected = True
         return CameraInfo(model=str(self._values[Prop.PRODUCT_NAME]), port="mock")
@@ -64,9 +64,9 @@ class MockCamera:
 
     def _require(self) -> None:
         if not self._connected:
-            raise CameraError("Foťák není připojený.")
+            raise CameraError("Camera is not connected.")
 
-    # --- vlastnosti ---
+    # --- properties ---
     def allowed_values(self, prop: Prop) -> list[int]:
         self._require()
         return {Prop.ISO: _ISO_CODES, Prop.TV: _TV_CODES, Prop.AV: _AV_CODES,
@@ -81,7 +81,7 @@ class MockCamera:
         check_allowed(self, prop, value)
         self._values[prop] = value
 
-    # --- live view a ostření ---
+    # --- live view and focus ---
     def start_live_view(self) -> None:
         self._require()
         self._live = True
@@ -91,7 +91,7 @@ class MockCamera:
 
     def set_live_view_zoom(self, factor: int, x: int | None = None, y: int | None = None) -> None:
         if factor not in (1, 5, 10):
-            raise CameraError("Lupa podporuje jen 1×, 5× a 10×.")
+            raise CameraError("Zoom supports only 1×, 5× and 10×.")
         h, w = self._signal.shape
         self._zoom = (factor, w // 2 if x is None else x, h // 2 if y is None else y)
 
@@ -112,24 +112,24 @@ class MockCamera:
     def autofocus(self) -> None:
         self._require()
         if not self._live:
-            raise CameraError("Ostření funguje jen v live view.")
+            raise CameraError("Focus works only in live view.")
         time.sleep(self._latency)
         self._defocus = float(self._rng.uniform(0.0, 1.5))
 
     def drive_focus(self, step: FocusStep) -> None:
         self._require()
         if not self._live:
-            raise CameraError("Ostření funguje jen v live view.")
+            raise CameraError("Focus works only in live view.")
         size = {1: 0.5, 2: 2.0, 3: 6.0}[abs(step.value)]
-        # simulace: "near" ostří blíž; optimum je na 0
+        # simulation: "near" focuses closer; the optimum is at 0
         self._defocus = abs(self._defocus - size) if step.value < 0 else self._defocus + size
 
     @property
     def defocus(self) -> float:
-        """Jen pro testy: aktuální simulované rozostření."""
+        """For tests only: current simulated defocus."""
         return self._defocus
 
-    # --- focení ---
+    # --- capture ---
     def capture(self, dest_dir: Path) -> Path:
         self._require()
         ensure_raw_quality(self)

@@ -10,7 +10,7 @@ def test_quality_classification():
     assert values.is_raw_only(LR)
     assert not values.is_raw_only(LRLJF) and values.has_raw(LRLJF)
     assert not values.has_raw(LJF)
-    assert values.is_raw_only(0x0164FF0F)  # M-RAW je taky jen RAW
+    assert values.is_raw_only(0x0164FF0F)  # M-RAW is also RAW only
     assert values.quality_label(LR) == "RAW"
     assert values.quality_label(LRLJF) == "RAW + JPEG"
     assert values.quality_label(LJF) == "JPEG"
@@ -28,7 +28,7 @@ def test_ensure_raw_switches_from_jpeg():
     cam.set(Prop.IMAGE_QUALITY, LJF)
     assert ensure_raw_quality(cam) == LR
     assert cam.get(Prop.IMAGE_QUALITY) == LR
-    assert ensure_raw_quality(cam) is None  # už RAW, nic se nemění
+    assert ensure_raw_quality(cam) is None  # already RAW, nothing changes
 
 
 def test_quality_set_only_allowed():

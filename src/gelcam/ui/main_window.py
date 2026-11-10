@@ -1,4 +1,4 @@
-"""Hlavní okno: připojení, live view s lupou, ostření, expozice a jednotlivý snímek."""
+"""Main window: connection, live view with zoom, focus, exposure and single-frame capture."""
 
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ _LABELS = {Prop.ISO: values.iso_label, Prop.TV: values.tv_label, Prop.AV: values
 
 
 def frame_stats(frame: np.ndarray, channel: int = 0) -> tuple[np.ndarray, float]:
-    """Histogram (64 košů) a podíl saturovaných pixelů vybraného kanálu náhledu."""
+    """Histogram (64 bins) and fraction of saturated pixels in the selected preview channel."""
     ch = frame[..., channel]
     hist, _ = np.histogram(ch, bins=64, range=(0, 256))
     return hist, float((ch >= 250).mean())
@@ -42,49 +42,49 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("GelCam")
         self.resize(1200, 760)
         self.ctrl = controller
-        self.out_dir = Path(user_documents_dir()) / "GelCam" / "snimky"
+        self.out_dir = Path(user_documents_dir()) / "GelCam" / "images"
         self._options_updating = False
 
         # --- live view ---
-        self.view = QLabel("Foťák není připojený")
+        self.view = QLabel("Camera is not connected")
         self.view.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.view.setMinimumSize(640, 427)
         self.view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.view.setStyleSheet("background:#111; color:#aaa;")
         self.hist = QLabel()
         self.hist.setFixedHeight(60)
-        self.sat = QLabel("Saturace: –")
+        self.sat = QLabel("Saturation: –")
 
-        # --- ovládání ---
-        self.btn_connect = QPushButton("Připojit foťák")
+        # --- controls ---
+        self.btn_connect = QPushButton("Connect camera")
         self.btn_live = QPushButton("Live view")
         self.btn_live.setCheckable(True)
         self.zoom = QComboBox()
         self.zoom.addItems(["1×", "5×", "10×"])
-        self.btn_af = QPushButton("Autofokus")
+        self.btn_af = QPushButton("Autofocus")
         self.focus_btns = {s: QPushButton(lbl) for s, lbl in [
             (FocusStep.NEAR_3, "≪≪"), (FocusStep.NEAR_2, "≪"), (FocusStep.NEAR_1, "‹"),
             (FocusStep.FAR_1, "›"), (FocusStep.FAR_2, "≫"), (FocusStep.FAR_3, "≫≫")]}
         self.combos = {p: QComboBox() for p in (Prop.ISO, Prop.TV, Prop.AV)}
-        self.btn_capture = QPushButton("Vyfotit snímek")
-        self.btn_dir = QPushButton("Složka…")
+        self.btn_capture = QPushButton("Take photo")
+        self.btn_dir = QPushButton("Folder…")
         self.dir_label = QLabel(str(self.out_dir))
         self.dir_label.setWordWrap(True)
         self.log = QPlainTextEdit()
         self.log.setReadOnly(True)
         self.log.setMaximumBlockCount(500)
 
-        conn = QGroupBox("Foťák")
+        conn = QGroupBox("Camera")
         cl = QVBoxLayout(conn)
         self.model_label = QLabel("–")
         cl.addWidget(self.btn_connect)
         cl.addWidget(self.model_label)
 
-        lv = QGroupBox("Live view a ostření")
+        lv = QGroupBox("Live view and focus")
         ll = QVBoxLayout(lv)
         row = QHBoxLayout()
         row.addWidget(self.btn_live)
-        row.addWidget(QLabel("Lupa"))
+        row.addWidget(QLabel("Zoom"))
         row.addWidget(self.zoom)
         ll.addLayout(row)
         ll.addWidget(self.btn_af)
@@ -92,16 +92,16 @@ class MainWindow(QMainWindow):
         for b in self.focus_btns.values():
             b.setFixedWidth(40)
             frow.addWidget(b)
-        ll.addWidget(QLabel("Ostření: blíž ← → dál"))
+        ll.addWidget(QLabel("Focus: nearer ← → farther"))
         ll.addLayout(frow)
 
-        exp = QGroupBox("Expozice")
+        exp = QGroupBox("Exposure")
         el = QFormLayout(exp)
         el.addRow("ISO", self.combos[Prop.ISO])
-        el.addRow("Čas", self.combos[Prop.TV])
-        el.addRow("Clona", self.combos[Prop.AV])
+        el.addRow("Shutter speed", self.combos[Prop.TV])
+        el.addRow("Aperture", self.combos[Prop.AV])
 
-        cap = QGroupBox("Snímek")
+        cap = QGroupBox("Image")
         capl = QVBoxLayout(cap)
         capl.addWidget(self.btn_capture)
         drow = QHBoxLayout()
@@ -112,7 +112,7 @@ class MainWindow(QMainWindow):
         side = QVBoxLayout()
         for g in (conn, lv, exp, cap):
             side.addWidget(g)
-        side.addWidget(QLabel("Záznam"))
+        side.addWidget(QLabel("Log"))
         side.addWidget(self.log, 1)
         side_w = QWidget()
         side_w.setLayout(side)
@@ -129,7 +129,7 @@ class MainWindow(QMainWindow):
         central.setLayout(main)
         self.setCentralWidget(central)
 
-        # --- signály ---
+        # --- signals ---
         self.btn_connect.clicked.connect(self._toggle_connect)
         self.btn_live.toggled.connect(self.ctrl.set_live_view)
         self.zoom.currentIndexChanged.connect(lambda i: self.ctrl.set_zoom((1, 5, 10)[i]))
@@ -145,9 +145,9 @@ class MainWindow(QMainWindow):
         self.ctrl.disconnected.connect(self._on_disconnected)
         self.ctrl.options_ready.connect(self._on_options)
         self.ctrl.frame_ready.connect(self._on_frame)
-        self.ctrl.captured.connect(lambda p: self._log(f"Uloženo: {p}"))
+        self.ctrl.captured.connect(lambda p: self._log(f"Saved: {p}"))
         self.ctrl.message.connect(self._log)
-        self.ctrl.error.connect(lambda m: self._log(f"CHYBA: {m}"))
+        self.ctrl.error.connect(lambda m: self._log(f"ERROR: {m}"))
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.ctrl.request_frame)
@@ -155,29 +155,29 @@ class MainWindow(QMainWindow):
         self._connected = False
         self._set_enabled(False)
 
-    # --- reakce ---
+    # --- handlers ---
     def _toggle_connect(self) -> None:
         if self._connected:
             self.btn_live.setChecked(False)
             self.ctrl.disconnect_camera()
         else:
-            self._log("Připojuji…")
+            self._log("Connecting…")
             self.ctrl.connect_camera()
 
     def _on_connected(self, info: CameraInfo) -> None:
         self._connected = True
         self.model_label.setText(info.model)
-        self.btn_connect.setText("Odpojit")
+        self.btn_connect.setText("Disconnect")
         self._set_enabled(True)
-        self._log(f"Připojeno: {info.model}")
+        self._log(f"Connected: {info.model}")
 
     def _on_disconnected(self) -> None:
         self._connected = False
         self.model_label.setText("–")
-        self.btn_connect.setText("Připojit foťák")
-        self.view.setText("Foťák není připojený")
+        self.btn_connect.setText("Connect camera")
+        self.view.setText("Camera is not connected")
         self._set_enabled(False)
-        self._log("Odpojeno.")
+        self._log("Disconnected.")
 
     def _on_options(self, opts: dict) -> None:
         self._options_updating = True
@@ -207,7 +207,7 @@ class MainWindow(QMainWindow):
             self.view.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         hist, sat = frame_stats(frame, channel=0)
         self._draw_hist(hist)
-        self.sat.setText(f"Saturace (R, náhled): {sat * 100:.2f} %  – přesně se měří až na RAW")
+        self.sat.setText(f"Saturation (R, preview): {sat * 100:.2f} %  – measured exactly only on RAW")
 
     def _draw_hist(self, hist: np.ndarray) -> None:
         w, h = 64 * 4, 60
@@ -220,7 +220,7 @@ class MainWindow(QMainWindow):
         self.hist.setPixmap(QPixmap.fromImage(img))
 
     def _choose_dir(self) -> None:
-        d = QFileDialog.getExistingDirectory(self, "Složka pro snímky", str(self.out_dir))
+        d = QFileDialog.getExistingDirectory(self, "Folder for images", str(self.out_dir))
         if d:
             self.out_dir = Path(d)
             self.dir_label.setText(d)

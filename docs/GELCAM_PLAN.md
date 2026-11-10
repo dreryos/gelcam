@@ -1,121 +1,132 @@
-# GelCam – plán, poznámky a historie
+# GelCam – plan, notes and history
 
-Kompletní kontext pro vývoj aplikace GelCam. Vznikl z konverzace 29. 10. – 4. 11. 2026. Stručná verze pro Claude Code je v `CLAUDE.md` v kořeni repozitáře.
-
----
-
-## 1. O co jde
-
-Laboratoř fotí agarózové gely z PCR zrcadlovkou **Canon EOS 100D** (pro testy kompatibility byl k dispozici i **EOS 500D**, nakonec se nepoužije). Oficiální EOS Utility 2 na Windows padá hned při spuštění a dostupné alternativy (digiCamControl, qDslrDashboard, Lightroom…) buď nemají workflow pro gely, nebo jsou placené či složité.
-
-**GelCam** je desktopová aplikace pro Windows, která:
-
-- ovládá 100D přes USB (Canon EDSDK),
-- má live view s lupou pro ostření a histogramem,
-- provede obsluhu průvodcem k co nejkvalitnějšímu snímku gelu,
-- zlepšuje kvalitu fyzikálně poctivými metodami: průměrování snímků (stacking), odečet dark frame, flat-field korekce, výběr barevného kanálu, binning,
-- exportuje lineární 16bitový TIFF vhodný ke kvantifikaci a archivuje původní RAW,
-- běží jako přenosná složka bez administrátorských práv.
+Complete context for developing the GelCam application. It originated from a conversation of 29 Oct - 4 Nov 2026. The short version for Claude Code is in `CLAUDE.md` in the repository root.
 
 ---
 
-## 2. Zkrácená historie konverzace
+## 1. What it is about
 
-1. **EOS Utility 2 padá na Windows** (100D, pád hned při spuštění, ještě bez foťáku). Pravděpodobné příčiny: chybějící/rozbitý .NET Framework 3.5 nebo poškozený uživatelský config (`%LocalAppData%\Canon_Inc`). Doporučená čistá reinstalace EU2 (2.14.x) ze stránky podpory 100D. EU3 tenhle model nepodporuje.
-2. **Open source tethering na Windows:** prakticky jen **digiCamControl** (MIT, C#, pod kapotou Canon EDSDK, podporuje 100D). Zdarma, ale ne open source: **qDslrDashboard**. Ostatní open source nástroje (gphoto2, Entangle, darktable tethering) běží na Linuxu/macOS, na Windows jen přes WSL2 + usbipd (bastl). Placené: Smart Shooter 4, Breeze DSLR Remote Pro, Helicon Remote, Lightroom Classic, Capture One, ON1.
-3. **Úpravy kontrastu a jasu při tetheringu:** buď Picture Style ve foťáku (ovlivní jen JPEG a live view), nebo úpravy RAW po snímku (Lightroom, Capture One, darktable). Pro gely se ukázalo, že důležitější je kvalita samotných dat než kosmetické úpravy.
-4. **Rozhodnutí napsat vlastní aplikaci.** Varianty backendu: (a) nadstavba nad digiCamControl (webserver/CLI), (b) **přímo Canon EDSDK – zvoleno**, (c) libgphoto2 přes MSYS2 – zamítnuto (vyžaduje výměnu USB ovladače přes Zadig, rozbije EOS Utility i digiCamControl).
-5. **digiCamControl používá oficiální EDSDK** (`EDSDK.dll`, `EdsImage.dll`). Jeho zdrojový kód (C#, GitHub) je dobrá referenční implementace (live view, události, message loop).
-6. **100D vs 500D:** stejný základ EDSDK (expozice, spoušť, stažení, live view). 500D je starší (DIGIC 4, pomalé ostření v live view) a nejnovější verze EDSDK ho nemusí podporovat. Pravidlo: povolené hodnoty vždy číst z foťáku za běhu. Vývojová platforma 100D, 500D pro test kompatibility.
-7. **Techniky pro lepší snímky gelů** (jádro aplikace): stacking (šum klesá s √N), dark frame, flat field, nízké ISO a delší čas, RAW místo JPEG (lineární data), výběr kanálu podle barviva (EtBr/GelRed → R, SYBR → G), binning 2×2, indikace saturace z RAW, 16bitový TIFF a metadata. **AI denoising nepoužívat** (může potlačit slabé pruhy nebo vytvořit strukturu, která tam není; problém pro kvantifikaci i pravidla časopisů). Hardware pomůže víc než software: emisní filtr (oranžový pro EtBr, žlutý pro SYBR) a zatemnění.
-8. **Vznikl plán aplikace** (dokument „GelCam – plán aplikace“ na claude.ai; obsah je převzatý do tohoto souboru).
-9. **Vývoj potřebuje** Windows PC a samotný foťák jen pro etapu 0 a integrační testy. EDSDK existuje i pro macOS, ale finální ověření musí proběhnout na Windows. Windows ve VM na Apple Silicon pro test SDK nepoužívat.
-10. **Nasazení bez administrátora:** ano – PyInstaller (onedir), vestavěný ovladač WPD/PTP, přibalený VC++ runtime, nastavení v `%APPDATA%`. Rizika: AppLocker/zásady IT, hláška SmartScreen.
-11. **Náhrada zrcadlovky** (do budoucna): monochromatická astro kamera je pro gely lepší (bez Bayerovy masky, chlazení, elektronická závěrka). Viz kapitola 12.
-12. **Ostření přes EDSDK:** jen v live view a relativně po krocích (`kEdsCameraCommand_DriveLensEvf`, Near/Far 1–3). Objektiv musí být v poloze AF, absolutní pozice nejde zjistit. Původně plánováno až do v2.
-13. **Podobné projekty:** hotový ekvivalent neexistuje. Užitečné: **N.I.N.A.** (open source astro capture, Windows, nativní Canon/ZWO/QHY) + **Siril** (open source kalibrace a stacking). Python wrappery EDSDK: `edsdk-python` (Jiloc), `pyedsdk` (PyPI). Gelové projekty jsou hlavně hardwarové (Raspberry Pi, openIVIS) bez kalibrace a stackingu.
-14. **Nemusí se čekat na schválení EDSDK.** Pipeline, rozhraní kamery, MockCamera, GUI a průvodce jdou vyvíjet hned nad testovacími daty. Windows je potřeba až pro EDSDK, balení a test nasazení.
-15. **Upřesněná sestava (4. 11.):** kovová skříň s foťákem shora, ostřicí kroužek nedosažitelný (ostření jen AF → softwarové ostření patří do v1), ručně měnitelný zoom, UV 70/100 % a bílé světlo, pevný oranžový filtr. Návod na testovací data: `docs/TESTOVACI_DATA.md`.
+The laboratory photographs agarose gels from PCR with a **Canon EOS 100D** DSLR (for compatibility tests an **EOS 500D** was also available, but it will ultimately not be used). The official EOS Utility 2 on Windows crashes immediately on launch, and the available alternatives (digiCamControl, qDslrDashboard, Lightroom…) either lack a gel workflow, or are paid or complicated.
+
+**GelCam** is a desktop application for Windows which:
+
+- controls the 100D over USB (Canon EDSDK),
+- has live view with a magnifier for focusing and a histogram,
+- guides the operator through the process to obtain the best possible image of the gel,
+- improves quality by physically sound methods: averaging of frames (stacking), dark frame subtraction, flat-field correction, colour channel selection, binning,
+- exports a linear 16-bit TIFF suitable for quantification and archives the original RAW,
+- runs as a portable folder without administrator rights.
 
 ---
 
-## 3. Hardware a prostředí
+## 2. Condensed history of the conversation
 
-### Skutečná sestava (upřesněno 4. 11. 2026)
+1. **EOS Utility 2 crashes on Windows** (100D, crash immediately on launch, still without camera connected). Probable causes: missing/broken .NET Framework 3.5 or a corrupted user config (`%LocalAppData%\\Canon_Inc`). Recommended clean reinstallation of EU2 (2.14.x) from the 100D support page. EU3 does not support this model.
+2. **Open source tethering on Windows:** practically only **digiCamControl** (MIT, C#, uses Canon EDSDK underneath, supports 100D). Free, but not open source: **qDslrDashboard**. Other open source tools (gphoto2, Entangle, darktable tethering) run on Linux/macOS; on Windows only via WSL2 + usbipd (bastl). Paid: Smart Shooter 4, Breeze DSLR Remote Pro, Helicon Remote, Lightroom Classic, Capture One, ON1.
+3. **Adjusting contrast and brightness during tethering:** either Picture Style in the camera (affects only JPEG and live view), or RAW adjustments after capture (Lightroom, Capture One, darktable). For gels it turned out that the quality of the data itself matters more than cosmetic adjustments.
+4. **Decision to write a custom application.** Backend variants: (a) wrapper over digiCamControl (web server/CLI), (b) **direct Canon EDSDK – chosen**, (c) libgphoto2 via MSYS2 – rejected (requires replacing the USB driver via Zadig, which breaks EOS Utility and digiCamControl).
+5. **digiCamControl uses the official EDSDK** (`EDSDK.dll`, `EdsImage.dll`). Its source code (C#, GitHub) is a good reference implementation (live view, events, message loop).
+6. **100D vs 500D:** same EDSDK base (exposure, shutter release, download, live view). 500D is older (DIGIC 4, slow focusing in live view) and the newest EDSDK version may not support it. Rule: always read the allowed values from the camera at runtime. Development platform 100D, 500D for compatibility testing.
+7. **Techniques for better gel images** (core of the application): stacking (noise falls with √N), dark frame, flat field, low ISO and longer exposure, RAW instead of JPEG (linear data), channel selection by dye (EtBr/GelRed → R, SYBR → G), 2×2 binning, saturation indication from RAW, 16-bit TIFF and metadata. **Do not use AI denoising** (it may suppress faint bands or create structure that is not there; a problem for quantification and journal rules). Hardware helps more than software: emission filter (orange for EtBr, yellow for SYBR) and light-tight enclosure.
+8. **Application plan created** (document "GelCam – application plan" on claude.ai; its content was taken over into this file).
+9. **Development requires** a Windows PC, and the camera itself only for stage 0 and integration tests. EDSDK exists for macOS too, but final verification must take place on Windows. Do not use Windows in a VM on Apple Silicon for testing the SDK.
+10. **Deployment without administrator:** yes – PyInstaller (onedir), built-in WPD/PTP driver, bundled VC++ runtime, settings in `%APPDATA%`. Risks: AppLocker/IT policies, SmartScreen warning.
+11. **Replacement of the DSLR** (future): a monochrome astro camera is better for gels (no Bayer mask, cooling, electronic shutter). See chapter 12.
+12. **Focusing via EDSDK:** only in live view and relatively in steps (`kEdsCameraCommand_DriveLensEvf`, Near/Far 1–3). The lens must be in AF position; absolute position cannot be read. Originally planned for v2.
+13. **Similar projects:** no ready-made equivalent exists. Useful: **N.I.N.A.** (open source astro capture, Windows, native Canon/ZWO/QHY support) + **Siril** (open source calibration and stacking). Python wrappers for EDSDK: `edsdk-python` (Jiloc), `pyedsdk` (PyPI). Gel projects are mainly hardware-based (Raspberry Pi, openIVIS) without calibration and stacking.
+14. **No need to wait for EDSDK approval.** Pipeline, camera interface, MockCamera, GUI and wizard can be developed immediately on test data. Windows is needed only for EDSDK, packaging and deployment testing.
+15. **Specified setup (4 Nov):** metal cabinet with camera from above, focusing ring unreachable (focusing AF only → software focusing belongs in v1), manually changeable zoom, UV 70/100 % and white light, fixed orange filter. Guide for test data: `docs/TESTOVACI_DATA.md`.
 
-- **Kovová skříň** (temná komora), fotoaparát je **zanořený shora** objektivem dolů.
-- **Zoom** na objektivu jde ručně měnit, **ostřicí kroužek není dosažitelný** → ostří se výhradně autofokusem (z foťáku nebo z aplikace přes EDSDK).
-- **Osvětlení:** UV lampa se dvěma úrovněmi (**70 % a 100 %**) a **bílé světlo**, přepínatelné.
-- **Emisní filtr:** pevný **oranžový** filtr před objektivem.
+---
 
-### Fotoaparát Canon EOS 100D – parametry důležité pro GelCam (ze specifikace Canon)
+## 3. Hardware and environment
 
-| Parametr | Hodnota | Dopad |
+### Actual setup (specified 4 Nov 2026)
+
+- **Metal cabinet** (darkroom), camera is **inserted from above** with the lens facing down.
+- **Zoom** on the lens can be changed manually, **focusing ring is not reachable** → focusing is done exclusively by autofocus (from the camera or from the application via EDSDK).
+- **Illumination:** UV lamp with two levels (**70 % and 100 %**) and **white light**, switched **by hand on the cabinet** — not controllable from software (confirmed 10 Nov 2026).
+- **Emission filter:** fixed **orange** filter in front of the lens.
+
+### Canon EOS 100D – parameters important for GelCam (from Canon specification)
+
+| Parameter | Value | Impact |
 | --- | --- | --- |
-| Snímač | CMOS APS-C 22,3 × 14,9 mm, 18 Mpx, Bayer (primární barvy) | výběr kanálu z mozaiky |
-| RAW | 14bit CR2, 5184 × 3456 px | jeden kanál (R) = 2592 × 1728 px |
-| Časy | 30 s – 1/4000 s, Bulb | nad 30 s jen Bulb (v1 se mu vyhnout, raději víc snímků) |
-| ISO | 100–12800 (rozšíření H 25600) | pro gely ISO 100 |
-| Závěrka | štěrbinová s elektronickou první lamelou, tiché snímání | v live view méně otřesů |
-| Live view | Hybrid CMOS AF II, FlexiZone-Single, lupa 5×/10×, histogram, mřížka | ostření a kontrola z aplikace |
-| Rozhraní | USB 2.0 Hi-Speed (mini-USB) | stažení RAW ~1–2 s |
-| Napájení | LP-E12; síťová sada **ACK-E15** | v boxu vždy síťový adaptér |
-| Úspora energie | vypnutí po 30 s – 15 min | aplikace musí prodlužovat (EDSDK `ExtendShutDownTimer`) nebo nastavit nejdelší |
-| Hledáček | závěrka okuláru jen na řemenu | okulár míří ven ze skříně → přelepit/zakrýt (průnik světla při dlouhých expozicích) |
+| Sensor | CMOS APS-C 22.3 × 14.9 mm, 18 Mpx, Bayer (primary colours) | channel selection from mosaic |
+| RAW | 14-bit CR2, 5184 × 3456 px | single channel (R) = 2592 × 1728 px |
+| Times | 30 s – 1/4000 s, Bulb | above 30 s only Bulb (in v1 avoid it, prefer more frames) |
+| ISO | 100–12800 (H expansion 25600) | for gels ISO 100 |
+| Shutter | focal-plane with electronic first curtain, quiet shooting | fewer vibrations in live view |
+| Live view | Hybrid CMOS AF II, FlexiZone-Single, magnifier 5×/10×, histogram, grid | focusing and checking from the application |
+| Interface | USB 2.0 Hi-Speed (mini-USB) | RAW download ~1–2 s |
+| Power | LP-E12; mains kit **ACK-E15** | always mains adapter in the box |
+| Power saving | auto power-off after 30 s – 15 min | application must extend it (EDSDK `ExtendShutDownTimer`) or set the longest |
+| Viewfinder | eyepiece shutter is only on a strap | eyepiece points out of cabinet → tape/cover (light leak during long exposures) |
 
-### Prostředí
+### Environment
 
-| Prvek | Požadavek | Poznámka |
+| Element | Requirement | Note |
 | --- | --- | --- |
-| Fotoaparát | Canon EOS 100D, režim M, RAW (CR2) | 500D pro test kompatibility; mini-USB kabel |
-| Napájení | síťový adaptér ACK-E15 | live view a série baterii rychle vybijí |
-| Karta | karta ve foťáku, nebo v menu zapnout „Spoušť bez karty“ | jinak foťák odmítne exponovat |
-| Uchycení | pevně ve skříni | flat field platí jen při stejné geometrii, zoomu a ostření |
-| Zatemnění | kovová skříň; zakrytý okulár | |
-| Emisní filtr | pevný oranžový | ideální pro EtBr/GelRed; pro SYBR (emise ~520 nm) ho oranžový filtr velkou část odřízne – ověřit na datech |
+| Camera | Canon EOS 100D, mode M, RAW (CR2) | 500D for compatibility test; mini-USB cable |
+| Power | ACK-E15 mains adapter | live view and battery series drain quickly |
+| Card | card in camera, or enable "Release shutter without card" in the menu | otherwise camera refuses to expose |
+| Mounting | fixed in cabinet | flat field applies only with the same geometry, zoom and focus |
+| Light-tightness | metal cabinet; covered eyepiece | |
+| Emission filter | fixed orange | ideal for EtBr/GelRed; for SYBR (emission ~520 nm) the orange filter cuts off much of it – verify on data |
 | PC | Windows 10/11 x64, USB 2.0+ | |
-| SDK | Canon EDSDK (registrace v Canon Developer Programme, schválení trvá několik dní) | verze, která podporuje 100D (a ideálně i 500D) |
+| SDK | Canon EDSDK (registration in Canon Developer Programme, approval takes several days) | version supporting 100D (and ideally 500D) |
 
-### Důsledky sestavy pro aplikaci
+### Consequences of the setup for the application
 
-- **Ostření musí umět aplikace už ve v1:** spuštění AF v live view (`kEdsCameraCommand_DoEvfAf`, FlexiZone-Single na pruhu markeru) a jemné doladění po krocích (`DriveLensEvf`) podle míry ostrosti. Ostří se nejlépe **při bílém světle** (vysoký kontrast), pak se přepne na UV.
-- **Spoušť bez AF:** při focení nesmí foťák znovu zaostřit (EDSDK spoušť s variantou NonAF; při ručním focení přesunout AF na tlačítko * v uživatelských funkcích).
-- **Ostření se ověřuje na začátku každé session** a po každé změně zoomu (u zoomového objektivu se při změně ohniska posouvá i ostření; u STM objektivů může ostření po vypnutí foťáku ujet).
-- **Zoom je součást kalibrace:** flat platí jen pro danou polohu zoomu. Doporučení: zvolit jednu polohu, označit ji na objektivu a změnu zoomu brát jako novou kalibraci.
-- **Úroveň UV (70/100 %) je součást profilu a metadat;** flaty se pořizují pro používanou úroveň.
-- **Bílé světlo** slouží k ostření, zarovnání gelu a volitelnému dokumentačnímu snímku (pozice jamek). Jako flat pro fluorescenci se nepoužívá (jiné spektrum i rozložení).
-- **Darky bez krytky:** objektiv je ve skříni, takže dark = zhasnuté světlo, zavřená skříň, zakrytý okulár.
-- **Výběr kanálu se ověří na datech:** u EtBr za oranžovým filtrem R; pro SYBR změřit SNR v R a G kanálu a podle toho nastavit profil.
+- **Focusing must be possible in the application already in v1:** starting AF in live view (`kEdsCameraCommand_DoEvfAf`, FlexiZone-Single on the marker band) and fine adjustment in steps (`DriveLensEvf`) based on sharpness measure. Best focused **under white light** (high contrast), then switch to UV.
+- **Shutter release without AF:** during shooting the camera must not refocus (EDSDK release with NonAF variant; for manual focusing move AF to the * button in custom functions).
+- **Focus is verified at the start of each session** and after every zoom change (with a zoom lens focus shifts when focal length changes; with STM lenses focus may drift after the camera is switched off).
+- **Zoom is part of calibration:** flat is valid only for the given zoom position. Recommendation: choose one position, mark it on the lens, and treat a zoom change as a new calibration.
+- **UV level (70/100 %) is part of profile and metadata;** flats are taken for the level in use.
+- **White light** serves for focusing, gel alignment and an optional documentation image (well positions). It is not used as flat for fluorescence (different spectrum and distribution).
+- **Darks without cap:** lens is inside the cabinet, so dark = lights off, cabinet closed, eyepiece covered.
+- **Channel selection is verified on data:** for EtBr behind orange filter R; for SYBR measure SNR in R and G channel and set profile accordingly.
 
 ---
 
-## 4. Architektura
+## 4. Architecture
 
-Pět vrstev. Veškerá komunikace s foťákem jde přes jedno rozhraní, takže lze foťák nahradit simulací a později i mono kamerou.
+Five layers. All communication with the camera goes through a single interface, so the camera can be replaced by a simulation and later by a mono camera.
 
 ```
-Rozhraní (PySide6)        hlavní obrazovka, průvodce, profily
+UI (PySide6)              main window, wizard, profiles
         │
-Řízení snímání            live view smyčka, série, kalibrace, návrh expozice
+Acquisition               live view loop, series, calibration, exposure proposal
         │                         │
-Rozhraní kamery            Zpracování
+Camera interface           Processing
   EdsdkCamera (EDSDK)        rawpy + numpy: dark, flat, stacking,
-  MockCamera (soubory)       výběr kanálu, binning, export TIFF
+  MockCamera (files)         channel selection, binning, TIFF export
   [AsiCamera – budoucnost]        │
-        │                   Úložiště
-Fotoaparát přes USB          složka gelu, knihovna kalibrací, profily
+        │                   Storage
+Camera over USB              gel folder, calibration library, profiles
 ```
 
-### Technologie
+### Technologies
 
-- Python 3.12 **x64**, GUI v **PySide6** (Qt 6).
-- Canon EDSDK přes `ctypes` (vlastní tenký wrapper), případně `edsdk-python` / `pyedsdk` jako inspirace nebo základ.
-- `rawpy` (LibRaw) – čtení CR2, `numpy` – výpočty, `tifffile` – 16bitový export, `opencv-python-headless` – zarovnání (fázová korelace), `Pillow` – náhledy.
-- `pytest` – testy, `PyInstaller` – balení (onedir).
-- Správa prostředí: `uv` (instalace bez administrátora), případně venv + pip.
-- Alternativa, která zůstává otevřená: C#/.NET (blíž k digiCamControl), ale bez rawpy/numpy.
+- Python 3.12 **x64**, GUI in **PySide6** (Qt 6).
+- Canon EDSDK via `ctypes` (own thin wrapper), possibly `edsdk-python` / `pyedsdk` as inspiration or base.
+- `rawpy` (LibRaw) – reading CR2, `numpy` – computations, `tifffile` – 16-bit export, `opencv-python-headless` – alignment (phase correlation), `Pillow` – previews.
+- `pytest` – tests, `PyInstaller` – packaging (onedir).
+- Environment management: `uv` (installation without administrator rights), or venv + pip.
+- **Another language was considered and rejected (10 Nov 2026):** see "Performance on the
+  target PC". Of the 4.9 ms live-view frame and the 1.6 s eight-frame stack, almost everything
+  already runs inside compiled C/C++ — libjpeg for the EVF frame, numpy for the LUT, histogram
+  and sigma clipping, OpenCV for sharpness and phase correlation, LibRaw for the CR2. The
+  Python part is the glue between those calls and costs microseconds, so Rust, C++ or C# would
+  make the same library calls at the same speed; LibRaw needs 190 ms per frame in any language.
+  What a rewrite would genuinely buy is a smaller baseline (156 MB, or 108 MB with lazy
+  imports, against roughly 60–90 MB for C# or 30–60 MB for Rust) and a much smaller, faster
+  starting bundle (PyInstaller onedir is hundreds of MB against ~15 MB for a Rust binary),
+  neither of which outweighs discarding the EDSDK layer that is already verified on the real
+  camera. C# would additionally have digiCamControl as a reference for EDSDK marshalling —
+  the one real argument, and the reason the option stayed open until stage 1b was finished.
 
-### Navržená struktura repozitáře
+### Proposed repository structure
 
 ```
 gelcam/
@@ -124,39 +135,39 @@ gelcam/
   docs/GELCAM_PLAN.md
   src/gelcam/
     camera/
-      base.py            # Protocol Camera + datové typy
-      mock.py            # MockCamera – přehrává soubory z testovací sady
-      edsdk/             # EdsdkCamera, ctypes binding, vlákno s message loop
+      base.py            # Protocol Camera + data types
+      mock.py            # MockCamera – replays files from the test set
+      edsdk/             # EdsdkCamera, ctypes binding, thread with message loop
     acquisition/
-      live_view.py       # smyčka EVF snímků
-      series.py          # série N snímků, průběžné stahování, obnovení
-      exposure.py        # návrh expozice z testovacího RAW
-      calibration.py     # pořízení darků a flatů
+      live_view.py       # EVF frame loop
+      series.py          # series of N frames, incremental download, resume
+      exposure.py        # exposure proposal from a test RAW
+      calibration.py     # taking darks and flats
     processing/
-      raw_io.py          # načtení CR2, black/white level, CFA vzor
-      channel.py         # výběr kanálu z mozaiky bez demozaikování
-      calib.py           # master dark (medián), master flat, aplikace
-      align.py           # detekce posunu, zarovnání
-      stack.py           # průměr se sigma clipping
+      raw_io.py          # CR2 loading, black/white level, CFA pattern
+      channel.py         # channel selection from the mosaic, no demosaicing
+      calib.py           # master dark (median), master flat, application
+      align.py           # shift detection, alignment
+      stack.py           # mean with sigma clipping
       binning.py
       export.py          # TIFF + preview PNG + metadata.json
-      pipeline.py        # spojení kroků, zápis historie zpracování
+      pipeline.py        # step chaining, processing history
     storage/
-      layout.py          # struktura složky gelu
+      layout.py          # gel folder structure
       metadata.py
       profiles.py        # profily barviv (TOML)
     ui/
       main_window.py
-      wizard/            # 7 kroků průvodce
+      wizard/            # 7 wizard steps
   profiles/              # etbr.toml, gelred.toml, sybr.toml
   tests/
-    test_*.py            # testy; syntetické gely generuje src/gelcam/testing/synthetic.py
+    test_*.py            # tests; synthetic gels from src/gelcam/testing/synthetic.py
   tools/                 # check_edsdk_constants.py, edsdk_smoke.py (etapa 0)
-  vendor/edsdk/          # DLL a hlavičky Canon – NECOMMITOVAT (.gitignore)
-  testdata/              # nafocené sady – NECOMMITOVAT
+  vendor/edsdk/          # Canon DLLs and headers – DO NOT COMMIT (.gitignore)
+  testdata/              # captured sets – DO NOT COMMIT
 ```
 
-### Rozhraní kamery (návrh)
+### Camera interface (proposal)
 
 ```python
 from typing import Protocol
@@ -164,300 +175,475 @@ from pathlib import Path
 import numpy as np
 
 class Camera(Protocol):
-    def connect(self) -> "CameraInfo": ...            # model, sériové č., stav napájení
+    def connect(self) -> "CameraInfo": ...            # model, serial no., power state
     def disconnect(self) -> None: ...
-    def allowed_values(self, prop: "Prop") -> list: ...  # VŽDY číst z foťáku
+    def allowed_values(self, prop: "Prop") -> list: ...  # ALWAYS read from the camera
     def get(self, prop: "Prop"): ...
     def set(self, prop: "Prop", value) -> None: ...   # jen hodnoty z allowed_values()
     def start_live_view(self) -> None: ...
-    def live_view_frame(self) -> np.ndarray: ...      # dekódovaný JPEG z EVF
+    def live_view_frame(self) -> np.ndarray: ...      # decoded JPEG from EVF
     def set_live_view_zoom(self, factor: int, x: int, y: int) -> None: ...
     def stop_live_view(self) -> None: ...
-    def capture(self, dest_dir: Path) -> Path: ...    # vyfotí bez AF a stáhne RAW
+    def capture(self, dest_dir: Path) -> Path: ...    # shoots without AF and downloads RAW
     def drive_focus(self, step: int) -> None: ...     # -3..+3, jen v live view (v2)
 ```
 
-`Prop` je výčet: `ISO`, `TV` (čas), `AV` (clona), `IMAGE_QUALITY`, `AE_MODE`… EDSDK kódy hodnot (např. ISO 100 = `0x48`) převádí jen vrstva `camera/edsdk/`.
+`Prop` is an enumeration: `ISO`, `TV` (time), `AV` (aperture), `IMAGE_QUALITY`, `AE_MODE`… EDSDK value codes (e.g. ISO 100 = `0x48`) are converted only by the `camera/edsdk/` layer.
 
 ---
 
-## 5. Funkce
+## 5. Functions
 
-### Hlavní obrazovka
+### Main screen
 
-- **Připojení:** detekce foťáku, model, stav napájení, srozumitelné chyby, automatické obnovení po uspání nebo odpojení.
-- **Live view:** stream JPEG z EVF, lupa 5×/10× pro ruční ostření, mřížka, invertované zobrazení.
-- **Histogram a saturace:** živý histogram vybraného kanálu a zvýraznění přepalů. Z live view jde jen o odhad, přesně se měří na RAW.
-- **Expozice:** čas, clona, ISO; povolené hodnoty se načítají z foťáku. Bulb (> 30 s) až když bude potřeba.
-- **Jednotlivý snímek:** rychlé vyfocení bez zpracování.
+- **Connection:** camera detection, model, power status, understandable errors, automatic recovery after sleep or disconnection.
+- **Live view:** JPEG stream from EVF, 5×/10× magnifier for manual focusing, grid, inverted display.
+- **Histogram and saturation:** live histogram of selected channel and highlighting of clipping. From live view it is only an estimate; exact measurement is done on RAW.
+- **Exposure:** time, aperture, ISO; allowed values are read from the camera. Bulb (> 30 s) only when needed.
+- **Single frame:** quick capture without processing.
 
-### Průvodce (7 kroků)
+### Live View window (main screen, designed 10 Nov 2026)
 
-1. **Profil a popis gelu:** barvivo (EtBr, GelRed, SYBR…), úroveň UV (70/100 %), název, poznámka. Profil určí kanál a výchozí expozici.
-2. **Kontrola scény:** bílé světlo, live view s mřížkou; checklist (zavřená skříň, zakrytý okulár, gel uprostřed, zoom na označené poloze).
-3. **Ostření:** při bílém světle AF v live view na pruh markeru, pak jemné doladění po krocích podle míry ostrosti; obsluha potvrdí na 10× lupě. Potom přepnout na UV (zvolená úroveň 70/100 %).
-4. **Testovací expozice:** jeden RAW; aplikace změří nejjasnější oblast ve vybraném kanálu a navrhne čas, aby byla na 70–80 % rozsahu bez saturace. Nad limit (např. 30 s) radši víc snímků.
-5. **Kalibrace:** dark frames automaticky (zhasnuté světlo, zavřená skříň, stejný čas a ISO). Flat field jednou za čas pro dané uspořádání; upozornění, když je starší než limit.
-6. **Série:** N snímků (výchozí 8, volba 4–32), průběh, odhad zisku SNR (√N), kontrola saturace a posunu.
-7. **Kontrola a export:** výsledek vedle jednoho snímku pro srovnání šumu, mapa saturace, inverze; export jedním tlačítkem.
+Mockups: `design/export/lv1_framing.png` (framing under white light) and
+`design/export/lv2_focusing.png` (focusing at 10× under UV); script `design/design_liveview.py`.
+Window 1280 × 800, preview pane 780 × 520, right column 300 px.
 
-### Profily barviv (výchozí)
+**Layout.** Top bar: application name, camera state as chips (model, power, image quality, UV
+level) and the **New gel image…** button that enters the wizard. Below it, on the left, the
+view toolbar (grid, invert, clipping overlay, zoom 1×/5×/10×, display gain) and the live view
+pane; under the pane a wide histogram with the channel selector. Right column: Camera,
+Exposure and Single frame cards in framing mode, Focus and Exposure in focusing mode. Status
+bar at the bottom: connection, frame rate, lighting, zoom position, link to the log.
 
-| Barvivo | Kanál | Filtr |
+**What the operator does here.** Frame the gel, focus, set exposure and take single frames.
+The wizard is the guided path for an actual gel; this window is the free one and is also where
+a session starts (connection, focus check after a zoom change).
+
+**Estimate vs measurement — the distinction must be visible.** The live view stream is an 8-bit
+JPEG from EVF with a display gamma, so its histogram and clipping overlay are indicative only.
+The authoritative numbers come from a captured RAW: brightest region in ADU, share of saturated
+pixels, white level of that frame. The Single frame card therefore shows both the file and the
+measured values, labelled as measured on RAW.
+
+**Magnification is done in the camera.** `set_live_view_zoom` switches the EVF stream itself to
+a 5× or 10× crop, so the pane shows the magnified region, not an inset. A navigator thumbnail in
+the corner shows which part of the frame is displayed; step 3 of the wizard uses the same
+idiom.
+
+**Display adjustment (preview only).** Under UV the scene is dim and a faint band is barely
+distinguishable from the background in the raw preview, so the window carries a display
+transfer function: **black point, white point and gamma**, with the black and white handles
+sitting directly on the histogram under the preview, plus **Auto stretch**, **Reset** and
+**Invert**. It is a lookup table applied to the 8-bit preview frame — the EVF stream, the
+captured CR2 and `result.tif` are untouched, and the panel is labelled that way. The same
+control serves the review step of the wizard, and the chosen settings are what `preview.png`
+is written with and what goes into `metadata.json`; they never alter the quantitative data.
+Auto stretch derives the points from the current frame statistics (the astro-software screen
+transfer function, as in Siril or N.I.N.A.).
+
+**Focusing.** Sharpness is the variance of the Laplacian computed on the magnified EVF frame,
+shown as a large number with a sparkline of recent values, so the operator sees whether a step
+helped. `Run autofocus` is the coarse move (measured: 5.5 → 53.1), the six fine steps are
+`DriveLensEvf` Near/Far 1–3, and `Auto fine-focus` walks the steps and keeps the maximum.
+Focusing is done under white light; the shutter never refocuses.
+
+**Exposure.** ISO, shutter and aperture come from `allowed_values()` only. A value outside what
+gels need is flagged rather than blocked (e.g. ISO 800 — the state the camera was actually found
+in during stage 0).
+
+**Live view and heat.** Live view warms the sensor, which raises the dark current of warm pixels
+(measured: 2035 warm pixels after 1.5 h of work against 421 on a cold sensor at twice the
+exposure time). The window turns live view off before a series and the status bar says so.
+
+**How the app learns the UV level.** It cannot sense it — the lamp has no feedback to the
+camera or the PC, and the image alone is not reliable evidence (a weak gel under UV 100 % and a
+strong one under 70 % look alike). The level is therefore **declared by the operator**: the
+radio buttons in step 1 of the wizard, the `Which light is on?` row in step 2, and the
+clickable light chip in the Live View top bar all write the same session state, which goes into
+`metadata.json` and decides which flat field applies. A cheap cross-check is possible later and
+worth having: UV 70 % gives 0.80–0.81× the signal of UV 100 % on the same scene (measured), so
+once a test exposure exists the app can compare the background level against the flat of the
+declared level and warn when the two disagree by much more than that factor. It stays a
+warning, never an automatic correction.
+
+**Lighting is manual** (confirmed 10 Nov 2026). The lamp cannot be switched from software, so
+the UI only shows the current level as a state — in the top bar of the Live View window and as
+a line in step 2 of the wizard — and the wizard tells the operator when to switch by hand.
+The level is still recorded in metadata and decides which flat field applies.
+
+### Interface language
+
+The interface is **in English**; texts go through Qt `tr()` and translations are supplied as `.ts`/`.qm`;
+Czech is the second language. The language is selected in application settings, not in the wizard.
+
+### Wizard (7 steps)
+
+Mockup of all seven steps is in `design/` (document `gelcam-ui.figcraft`, exports
+`design/export/*.png`). The design is scripted — `design/design_wizard.py` builds the whole set via
+`build_all(mcp, lang="en"|"cs")`, so changing style or language is a rebuild, not redrawing. The content of individual steps
+corresponds to this list:
+
+
+1. **Profile and gel description:** dye (EtBr, GelRed, SYBR…), UV level (70/100 %), name, note. The profile determines the channel and default exposure.
+2. **Scene check:** white light, live view with grid; checklist (closed cabinet, covered eyepiece, gel in centre, zoom at marked position).
+3. **Focusing:** under white light AF in live view on the marker band, then fine adjustment in steps based on sharpness; operator confirms on 10× magnifier. Then switch to UV (selected level 70/100 %).
+4. **Test exposure:** one RAW; application measures brightest area in selected channel and proposes a time so it is at 70–80 % of range without saturation. Above the limit (e.g. 30 s) rather take more frames.
+5. **Calibration:** dark frames automatically (lights off, cabinet closed, same time and ISO). Flat field once in a while for the given arrangement; warning when it is older than the limit.
+6. **Series:** N frames (default 8, option 4–32), progress, estimate of SNR gain (√N), check of saturation and shift.
+7. **Check and export:** result next to single frame for noise comparison, saturation map, inversion; export with one button.
+
+### Error states and the remaining screens (designed 10 Nov 2026)
+
+Three tiers, and which one applies is decided by what the operator can do about it:
+
+| Tier | When | Example |
 | --- | --- | --- |
-| EtBr | R | oranžový |
-| GelRed | R | oranžový |
-| SYBR Safe / SYBR Green / Midori Green | G (oba G pixely) | žlutý / jantarový |
+| Full-area state | the camera is not usable at all, so nothing else on screen means anything | no camera found; connection lost |
+| Inline banner in the step | a problem that does not stop the work | saturated marker; flat field older than 30 days; zoom off the mark |
+| Dialog | a decision that has to be made now, with the work paused | series interrupted at frame 5 of 8 |
+
+Everything else — progress, retries, what the application just did — goes to the status bar and
+the log, never into a popup.
+
+Mockups in `design/export/`, built by `design/design_errors.py`:
+
+- `e1_no_camera` — EDSDK reports nothing. Lists the blocking applications found running
+  (`edsdk/blockers.py`), names the one holding the camera, and gives the four things worth
+  checking. Retries every 5 s by itself.
+- `e2_connection_lost` — the stream dims and a card counts the reconnect attempt, stating that
+  ISO, shutter and aperture will be restored. The measured reconnect time (9 s after a cable
+  pull) is what the wording promises.
+- `e3_series_interrupted` — the only dialog in the design. Resume from frame 6, start over, or
+  stack the five frames already downloaded, with what the shortfall costs in signal-to-noise
+  (x2.2 instead of x2.8) so the choice is informed.
+- `e4_saturated` — the marker sits at the white level and cannot be quantified. Proposes a
+  shorter exposure but lets the operator continue if only the faint bands matter.
+- `e5_af_failed` — autofocus found no contrast under UV; switch to white light, focus, switch
+  back.
+- `e6_flat_library` — the picker behind "Pick from library" in step 5: date, UV level, zoom,
+  exposure, frame count and age with a colour for staleness.
+- `e7_export_done` — what was written and what each file is for, with the reminder that
+  `result.tif` is the file to quantify and `preview.png` carries the display settings.
+- `s1_settings` — language, root folder, defaults for a new gel, dye profile table.
+
+**Deliberately not designed:** the log window (plain text is enough), disk-full and write
+errors (the inline banner pattern covers them), and the first-run state before any calibration
+exists.
+
+
+### Dye profiles (default)
+
+| Dye | Channel | Filter |
+| --- | --- | --- |
+| EtBr | R | orange |
+| GelRed | R | orange |
+| SYBR Safe / SYBR Green / Midori Green | G (both G pixels) | yellow / amber |
 
 ---
 
-## 6. Zpracovací pipeline
+## 6. Processing pipeline
 
-Všechny kroky až po výsledek jsou lineární a pracují s nedemozaikovanými daty RAW.
+All steps up to the result are linear and work with non-demosaiced RAW data.
 
 ```
-Světlé RAW ×N → − master dark → ÷ normalizovaný flat → výběr kanálu
-  → zarovnání (jen při posunu > 0,5 px) → průměr se sigma clipping
-  → binning 2×2 (volitelný) → result.tif (16 bit, lineární)
-                                  ╰┄→ volitelný denoise → samostatný soubor
+Light RAW ×N → − master dark → ÷ normalised flat → channel selection
+  → alignment (only when shift > 0.5 px) → mean with sigma clipping
+  → binning 2×2 (optional) → result.tif (16-bit, linear)
+                                   ╰┄→ optional denoise → separate file
 ```
 
-Vzorec:
+Formula:
 
 ```
 R = mean_σ( (L_i − D) / F̂ ),    F̂ = (F − D_F) / mean(F − D_F)
 ```
 
-- `L_i` světlé snímky, `D` master dark (medián 8–16 darků se stejným časem, ISO a podobnou teplotou), `F` master flat, `D_F` dark pro flat (nebo bias).
-- **Black level:** dark obsahuje i black level, takže `L − D` ho odstraní. U flatu je potřeba odečíst `D_F` (nebo aspoň black level z `raw.black_level_per_channel`), jinak bude normalizace zkreslená.
-- **Saturace:** pixely ≥ `raw.white_level` (nebo blízko) označit už ve světlých snímcích, před odečtem; saturovaný pruh nejde kvantifikovat.
-- **Výběr kanálu:** `raw.raw_image_visible` + `raw.raw_colors_visible` (indexy barev CFA). Pro R vzít R pixely, pro G oba G pixely (zprůměrovat 2×2 buňku → poloviční rozlišení). Žádná interpolace.
-- **Sigma clipping:** například 3σ přes osu snímků, iterativně; odstraní záblesky, kosmické paprsky a jednorázové posuny.
-- **Zarovnání:** `cv2.phaseCorrelate` na kanálu; pod 0,5 px se nepřevzorkovává.
-- **Denoising:** medián nebo non-local means, výchozí stav vypnuto, vždy jen jako samostatný soubor. **Žádný AI denoising.**
+- `L_i` light frames, `D` master dark (median of 8–16 darks with the same time, ISO and similar temperature), `F` master flat, `D_F` dark for the flat (or bias).
+- **Black level:** dark includes the black level, so `L − D` removes it. For the flat, `D_F` must be subtracted (or at least the black level from `raw.black_level_per_channel`), otherwise normalization will be distorted.
+- **Saturation:** pixels ≥ `raw.white_level` (or close) are flagged already in the light frames, before subtraction; a saturated band cannot be quantified.
+- **Channel selection:** `raw.raw_image_visible` + `raw.raw_colors_visible` (CFA colour indices). For R take R pixels, for G both G pixels (average 2×2 cell → half resolution). No interpolation.
+- **Sigma clipping:** e.g. 3σ along the frame axis, iteratively; removes flashes, cosmic rays and one-off shifts.
+- **Alignment:** `cv2.phaseCorrelate` on the channel; below 0.5 px no resampling.
+- **Denoising:** median or non-local means, default off, always only as a separate file. **No AI denoising.**
 
-### Kontrola správnosti (testy)
+### Correctness checks (tests)
 
-Syntetický gel: pozadí + Gaussovské pruhy se známou intenzitou + Poissonův šum + čtecí šum + hot pixely + vinětace. Test ověří, že:
+Synthetic gel: background + Gaussian bands with known intensity + Poisson noise + readout noise + hot pixels + vignetting. The test verifies that:
 
-- šum pozadí po stackingu N snímků klesne zhruba √N×,
-- poměr intenzit pruhů zůstane zachován (linearita) v toleranci,
-- hot pixely zmizí po odečtu darku,
-- vinětace zmizí po flat-field korekci.
+- background noise after stacking N frames drops roughly √N×,
+- the ratio of band intensities is preserved (linearity) within tolerance,
+- hot pixels disappear after dark subtraction,
+- vignetting disappears after flat-field correction.
 
 ---
 
-## 7. Integrita dat, ukládání a export
+## 7. Data integrity, storage and export
 
-**Pravidla**
+**Rules**
 
-- Původní RAW se nikdy nemění.
-- Kvantifikační výstup obsahuje jen lineární operace aplikované na celý obraz (odečet, dělení flatem, průměr, binning).
-- Jas, kontrast, gamma a inverze mění jen náhled, nikdy data v TIFF.
-- Každý krok zpracování se zapisuje do `metadata.json`.
+- The original RAW is never modified.
+- Quantification output contains only linear operations applied to the whole image (subtraction, division by flat, averaging, binning).
+- Brightness, contrast, gamma and inversion change only the preview, never the data in the TIFF.
+- Every processing step is written to `metadata.json`.
 
-**Struktura složky gelu**
+**Structure of a gel folder**
 
 ```
 2026-10-29_PCR-kontrola-primeru/
-  raw/            původní CR2 (světlé snímky)
-  calib/          dark frames, odkaz na použitý flat
-  result.tif      16bit, lineární, jeden kanál
-  preview.png     8bit náhled s nastaveným zobrazením
-  metadata.json   expozice, ISO, počet snímků, profil, kroky zpracování, verze aplikace
+  raw/            original CR2 (light frames)
+  calib/          dark frames, reference to the flat used
+  result.tif      16-bit, linear, single channel
+  preview.png     8-bit preview with the chosen display settings
+  metadata.json   exposure, ISO, frame count, profile, processing steps, app version
 ```
 
-- Flaty se ukládají zvlášť v knihovně kalibrací (datum, popis uspořádání).
-- Kořenová složka je nastavitelná (lokálně nebo síťový disk).
+- Flats are stored separately in the calibration library (date, description of the arrangement).
+- The root folder is configurable (local or network drive).
 
 ---
 
-## 8. Nasazení bez administrátora
+## 8. Deployment without administrator rights
 
-- **Balíček:** PyInstaller **onedir** (ne onefile – častější falešné poplachy antiviru). Obsahuje Python, PySide6, numpy, rawpy a EDSDK DLL.
-- **Ovladač foťáku:** není potřeba; Windows použije vestavěný WPD/PTP a EDSDK jde přes něj.
-- **Visual C++ runtime:** přibalit potřebné DLL do složky aplikace.
-- **Nastavení a profily:** ve složce aplikace nebo `%APPDATA%\GelCam`, nikdy v Program Files.
-- **První spuštění:** SmartScreen „Neznámý vydavatel“ jde jednorázově potvrdit.
-- **Test:** čistý uživatelský účet bez administrátora a PC bez VC++ runtime.
-- **Zjistit předem:** jestli IT nebrání spouštění nepodepsaných aplikací z uživatelských složek nebo USB (AppLocker, GPO).
-
----
-
-## 9. Technická rizika
-
-| Riziko | Řešení |
-| --- | --- |
-| EDSDK události vyžadují Windows message loop ve správném vlákně | veškerá komunikace s foťákem v jednom dedikovaném vlákně s message pumpou (nebo v hlavním Qt vlákně), GUI s ním mluví přes frontu/signály; inspirace v digiCamControl |
-| EDSDK nekontroluje platnost nastavovaných hodnot – špatná hodnota může foťák zablokovat (chyba 99; hlášen případ poškozeného 50D) | nastavovat **jen** hodnoty z `allowed_values()`, nesahat na nastavení mimo nutný rozsah, testovat opatrně |
-| Nejnovější EDSDK nemusí podporovat 100D/500D | ověřit v etapě 0; použít verzi, se kterou fotoaparáty fungují v digiCamControl |
-| Licence EDSDK | DLL ani hlavičky necommitovat do gitu; ověřit podmínky při registraci |
-| 32/64 bit | 64bitový Python + 64bitové EDSDK, kontrola při startu |
-| Uspání foťáku / vybití baterie během série | vypnout auto power off, síťový adaptér, obnovení série od posledního staženého snímku |
-| Ohřev čipu při live view | před sérií live view vypnout, darky pořizovat hned po sérii |
-| Posun gelu nebo foťáku během série | detekce posunu, zarovnání nebo varování |
-| EOS Utility nebo digiCamControl drží foťák | při startu kontrola, srozumitelná hláška „zavřete jinou aplikaci, která používá foťák“ |
-| Opotřebení závěrky | rozumné výchozí N, počítadlo snímků |
-| Ostřicí kroužek nedosažitelný, AF u slabé fluorescence selhává | ostřit při bílém světle, softwarové doladění po krocích, spoušť bez AF, kontrola ostrosti na začátku session |
-| Ostření ujede po změně zoomu nebo po vypnutí foťáku | po každé změně zoomu a na začátku session přeostřit; zoom držet na označené poloze |
-| Světlo okulárem při dlouhé expozici | zakrýt okulár; upozornění v průvodci |
+- **Package:** PyInstaller **onedir** (not onefile – more frequent antivirus false alarms). Contains Python, PySide6, numpy, rawpy and the EDSDK DLLs.
+- **Camera driver:** not needed; Windows uses the built-in WPD/PTP and EDSDK works through it.
+- **Visual C++ runtime:** bundle the required DLLs in the application folder.
+- **Settings and profiles:** in the application folder or `%APPDATA%\\GelCam`, never in Program Files.
+- **First launch:** SmartScreen "Unknown publisher" can be confirmed once.
+- **Test:** clean user account without administrator rights and a PC without VC++ runtime.
+- **Check in advance:** whether IT blocks running unsigned applications from user folders or USB (AppLocker, GPO).
 
 ---
 
-## 10. Etapy vývoje
+### Performance on the target PC (measured 10 Nov 2026)
 
-Celkem zhruba 4–6 týdnů soustředěné práce; odhady jsou orientační.
+The lab PC is a dual-core below 2 GHz with **2 GB RAM** on Windows 10 x64. The numbers below
+were measured single-threaded on a development machine over the real test sets
+(`tools/bench.py` reproduces them on any machine; run it on the lab PC before trusting the
+scaling). A 2 GHz Core 2 / early i3 / Atom-class core is roughly 4–6× slower per thread than
+the machine these came from.
 
-**Stav 4. 11. 2026 (etapa 0 bez snímání hotová, viz výsledky níže):** přístup ke Canon EDSDK je schválený. Pořadí se proto mění: hned po přípravě jde **etapa 0 a 1b (ovládání foťáku)**, pipeline (etapa 2) běží souběžně nad testovacími daty. Kostra projektu, rozhraní `Camera`, `MockCamera`, vrstva EDSDK (`src/gelcam/camera/edsdk/`), diagnostický skript etapy 0 (`tools/edsdk_smoke.py`), kontrola konstant proti hlavičkám (`tools/check_edsdk_constants.py`) a základní okno jsou založené; čekají na první spuštění na Windows s foťákem.
-
-| Etapa | Obsah | Hotovo, když | Odhad |
-| --- | --- | --- | --- |
-| P. Příprava | repo, `uv`, struktura, CI testy; nafocení testovacích sad; ~~žádost o EDSDK~~ (schváleno 4. 11.) | repo běží, testovací data jsou k dispozici | 1 den |
-| 2. Pipeline | `processing/` + CLI nad uloženými RAW, syntetické testy | syntetický test potvrdí zisk SNR ≈ √N a linearitu | 3–5 dní |
-| 1a. GUI nad simulací | rozhraní `Camera`, `MockCamera`, hlavní okno, live view, histogram | GUI běží bez foťáku | 3–4 dny |
-| 0. Ověření EDSDK | skript: připojení, čtení povolených hodnot, nastavení času a ISO, vyfocení, stažení RAW, jeden snímek live view | funguje se 100D (a 500D) | 1–2 dny |
-| 1b. EdsdkCamera | implementace rozhraní nad EDSDK, vlákno s message loop, obnovení spojení, prodlužování časovače vypnutí, **AF v live view a posun ostření po krocích** | hlavní obrazovka funguje se skutečným 100D a umí zaostřit | 4–6 dní |
-| 3. Průvodce | 7 kroků, návrh expozice, automatické darky, série | obsluha bez instrukcí pořídí zpracovaný snímek | 5 dní |
-| 4. Profily a export | profily barviv, knihovna flatů, metadata, struktura složek | výstup projde pravidly integrity | 3–5 dní |
-| 5. Pilot | testy na skutečných gelech, PyInstaller balíček, test bez admina | týden provozu bez blokující chyby | 1–2 týdny průběžně |
-
-### Testovací data k nafocení hned (přes digiCamControl, RAW)
-
-- 16 světlých snímků jednoho gelu (stejný čas, ISO 100–200, live view vypnutý),
-- 16 darků se stejným časem a ISO (transiluminátor vypnutý, nebo krytka),
-- 8 flatů (rovnoměrně svítící deska nebo prázdný gel s barvivem, ve stejné geometrii) + 8 darků pro flaty,
-- 1 sada s úmyslně přepáleným markerem (test detekce saturace),
-- volitelně 1 sada s malým posunem gelu (test zarovnání),
-- zapsat si barvivo, filtr, čas, ISO, clonu, objektiv a vzdálenost.
-
-### Výsledky etapy 0 (4. 11. 2026, Windows 11, Canon EOS 100D)
-
-- **SDK:** Canon EDSDK **13.21.10** (EDSDKv132110W, vydáno 3. 3. 2026), použita 64bitová `EDSDK_64/Dll`. 100D není v poznámkách k vydání výslovně uvedena, přesto funguje.
-- `uv sync` a `uv run pytest`: 45 testů v pořádku.
-- `check_edsdk_constants.py`: 62 konstant zkontrolováno. **Opraveny 2 chybné kódy chyb:** `EDS_ERR_TAKE_PICTURE_NO_CARD_NG` 0x8D07 → **0x8D06**, `EDS_ERR_TAKE_PICTURE_CARD_PROTECT_NG` 0x8D0B → **0x8D08**. Hlášky „CHYBÍ" u `kEdsAccess_ReadWrite`, `kEdsFileCreateDisposition_CreateAlways`, `kEdsSaveTo_Both` jsou falešný poplach (implicitní hodnoty enumů, ověřeno ručně: 2, 1, 3).
-- `edsdk_smoke.py` bez `--capture`: **10/10 kroků**. Připojení OK (sériové č. (skryto)), čtení vlastností OK (baterie 80 %, režim M), povolené hodnoty se načetly (ISO 100–12800 + Auto, časy Bulb–1/4000, clony f/5.6–f/36), live view snímek 960×640 při ~16,5 fps, vypnutí live view OK.
-- Stav foťáku při testu: ISO 800, 8", f/8. Pro gely nastavovat ISO 100.
-- `edsdk_smoke.py --capture`: **11/11 kroků.** Vyfocení a stažení RAW (`IMG_0001.CR2`, ~24 MB) funguje. První pokus skončil JPEG, protože foťák měl v menu kvalitu JPEG: **aplikace zatím kvalitu obrazu nenastavuje** (chybí `Prop.IMAGE_QUALITY`), do etapy 1b doplnit čtení/nastavení ze seznamu povolených hodnot.
-- **Zbývá:** viz výsledky etapy 1b níže.
-
-### Výsledky etapy 1b (4. 11. 2026, vrstva EDSDK, Canon EOS 100D)
-
-- **`Prop.IMAGE_QUALITY`:** čtení i nastavení jen z hodnot, které foťák vrátí (`EdsGetPropertyDesc`). 100D nabízí JPEG varianty, RAW+JPEG (0x640013) a RAW (0x64FF0F); M-RAW/S-RAW nenabízí. `ensure_raw_quality(camera)` vybere RAW bez JPEG v plné velikosti a `capture()` ji volá samo, takže obsluha nemusí hlídat menu foťáku. Ověřeno na foťáku: po přepnutí na JPEG se při focení vrátilo RAW. Při připojení se přidá upozornění, pokud foťák RAW neukládá.
-- **Obnovení spojení:** `EdsdkCamera.reconnect()` (zavře spojení, zkouší navázat nové a vrátí naposledy nastavené ISO, čas a clonu). **Ověřeno na skutečném odpojení:** vytažení a zapojení kabelu USB i vypnutí/zapnutí foťáku (`tools/edsdk_reconnect_test.py`); ztráta spojení se pozná do ~2 s a spojení se obnoví za ~9 s od odpojení. Test odhalil chybu: po neúspěšném připojení zůstalo SDK inicializované a každý další pokus končil „Inicializace EDSDK: 0x2"; opraveno úklidem (`EdsTerminateSDK`) při selhání `_connect`. Uspání foťáku (auto power off) zatím netestováno.
-- **Blokující aplikace:** před připojením se hledají běžící EOS Utility, digiCamControl, qDslrDashboard, Lightroom, Capture One, N.I.N.A. (`edsdk/blockers.py`). Při chybě „foťák nenalezen/obsazen" se jejich jména přidají do zprávy, jinak jen do `warnings`.
-- **Už před tím implementováno a nyní ověřeno bez chyby na 100D:** lupa 5×/1×, `DoEvfAf` (autofokus), `DriveLensEvf` (kroky Near/Far), spoušť bez AF (`Completely_NonAF`), prodlužování časovače vypnutí (každých 60 s + při `WillSoonShutDown`). `edsdk_smoke.py --focus --capture`: 19/19 kroků.
-- **Ostření ověřeno (4. 11. 2026, druhý pokus, kontrastní scéna se srovnávacím hřebenem):** z výrazného rozostření dostal **AF** (`DoEvfAf`) obraz ostrý (míra ostrosti 5,5 → 53, vizuálně potvrzeno na uloženém snímku live view). Jednotlivé kroky `DriveLensEvf` Near3/Far3 mění ostrost plynule a malým dílem (míra 5,5–8,9 při 12 krocích), takže jsou vhodné jen na doladění, ne na hrubé nastavení; hrubě ostří AF. První pokus na prázdné scéně nic neukázal.
-- **Zbývá z 1b:** test uspání foťáku (auto power off).
-- **500D:** test kompatibility se **nebude dělat** (rozhodnutí 4. 11. 2026, 500D se nebude používat). Podporovaný je jen 100D; kód ale dál čte povolené hodnoty z foťáku.
-
-
-### Postup etapy 2 – pipeline (4. 11. 2026)
-
-- **Hotovo:** `processing/raw_io.py` (`RawFrame`, `read_raw`: CR2 přes rawpy bez demozaikování, soubor se nemění) a `processing/channel.py` (`select_channel` R/G/B bez interpolace, G = průměr dvou G pixelů v buňce 2×2, výstup poloviční rozlišení; `saturation_mask`). Testy: syntetická mozaika (přesné pixely, jiná fáze CFA, lichý rozměr, nezměněný vstup) a skutečný CR2 z 100D. `rawpy`, `tifffile` a `opencv-python-headless` jsou teď běžné závislosti.
-- **Poznatky o CR2 ze 100D (IMG_0001.CR2):** viditelná plocha **5208 × 3476** (ne 5184 × 3456, to je jen výřez `crop_*`), vzor `RGBG` s vlevo nahoře R (`raw_pattern` [[0,1],[3,2]]), black level 2048/2048/2048/2047, kanál R/G po výběru 2604 × 1738.
-- **Saturace:** LibRaw hlásí `white_level` = **13 583** a **při ISO 100 sedí přesně** (viz řada časů níže: stovky tisíc pixelů přesně na 13 583). IMG_0001.CR2 byl pořízen při ISO 800, kde je skutečné ořezání vyšší (**~15 304**); hranice saturace tedy **závisí na ISO**. Maska přepalů proto používá `white_level` z hlavičky daného snímku, ne pevné číslo; pixely mírně nad hranicí (hot pixely, šum) se taky berou jako saturované.
-- **Zbývá z etapy 2:** `calib` (master dark – medián, master flat se `D_F`), `align` (fázová korelace), `stack` (sigma clipping), `binning`, `export` (16bit TIFF, preview, metadata), `pipeline` s historií kroků a testy: zisk SNR ≈ √N, linearita, hot pixely po darku, vinětace po flatu.
-
-### Naměřené darky a bias (4. 11. 2026, 100D, ISO 100, f/8)
-
-Pořízeno nástrojem `tools/capture_series.py` (jen hodnoty z `allowed_values`, po skončení se nastavení foťáku vrátí), 16 snímků v každé sadě, v `testdata/calib/` (necommituje se). Podmínky: světla zhasnutá, skříň zavřená, okulár zakrytý. Statistiky na surových mozaikách.
-
-| Sada | průměr nad černou | šum v čase (σ) | pixelů > medián+20 ADU | pixelů > medián+100 ADU | max (medián ze 16) |
-| --- | --- | --- | --- | --- | --- |
-| bias 1/4000 s | 2047,5 ADU | 7,2–7,5 ADU | 7 | 1 | 2150 |
-| dark 8 s | 2047,5 ADU | 7,2–7,3 ADU | 421 | 121 | 9205 |
-| dark 30 s | 2047,2 ADU | 7,3–7,4 ADU | 2228 | 124 | 11090 |
-
-- **Žádný světelný únik** ani zdvojení času: 30 s snímek trval 35,8 s, tedy redukce šumu při dlouhé expozici je vypnutá a darky jsou surová data.
-- **Black level** je v praxi 2047,5 ADU ve všech barvách a stabilní (drift průměru < 1 ADU za celou sadu); LibRaw hlásí 2048/2048/2048/2047, rozdíl 0,5 ADU je zanedbatelný, ale dark ho odstraní stejně.
-- **Šum v čase ≈ 7,3 ADU** (čtecí šum při ISO 100, stejný pro R, G, B a nezávislý na času až do 30 s).
-- **Žádný vzrůst průměrného temného proudu a žádný amp glow:** průměr po 30 s se neliší od biasu. Pozadí je rovnoměrné.
-- **Horké pixely:** asi **120 pixelů** je silně horkých (> 100 ADU nad pozadím) už při 8 s a jejich počet se při 30 s nemění; počet „teplých" pixelů (> 20 ADU) ale roste s časem: 7 → 421 → 2228 (z 18,1 Mpx). Darky tedy musí mít **stejný čas jako světlé snímky**; bias jako náhrada darku nestačí.
-- **Důsledek pro pipeline:** master dark = medián 8–16 darků (šum po mediánu ~2,2 ADU), `D_F` pro flat lze brát z darku stejného času, jeden snímek šumu ~7,3 ADU je při slabém signálu hlavní zdroj chyby, takže stacking se vyplatí.
-
-### Naměřený flat a řada časů při bílém světle (4. 11. 2026, 100D, ISO 100, f/8)
-
-Bílé světlo přes pevný oranžový filtr, bílý matný papír přes celé pole, zoom i ostření beze změny. Pořízeno `tools/capture_series.py` (`flat`, `ladder`), `testdata/calib/` (necommituje se).
-
-- **Flat:** 16× 8 s, v centru R ≈ 8650 a G ≈ 4750 ADU nad černou (R ≈ 75 % rozsahu), 0 % saturace, kolísání jasu mezi snímky ±1 % bez trendu (lampa se nezahřívá). **Vinětace: rohy mají ~73–75 % jasu středu** (G), což je přesně to, co flat field opraví. Časy flatu a darků jsou shodné (8 s), takže pro něj máme `D_F`.
-- **Spektrum scény:** R : G : B ≈ 1 : 0,55 : 0,04 (bílé světlo přes oranžový filtr). Pro kanál B se nepočítá.
-- **Řada časů** (1/64 až 32 s skutečného času, 2 snímky na čas, 12 časů):
-  - **Saturace:** při ISO 100 je ořezání přesně na **13 583** (= `white_level`, 4,3 mil. pixelů na stejné hodnotě); R saturuje už při 16 s, G při 32 s. Několik pixelů je mírně nad hranicí (max 14 962).
-  - **Zisk:** photon transfer curve dává **≈ 2,2 e⁻/ADU** (R i G po přepočtu na dva G pixely; B je kvůli slabému signálu nespolehlivé). Čtecí šum **≈ 6,7 ADU (~15 e⁻)**, shoduje se s šumem z biasu (7,3 ADU).
-  - **Linearita:** signál je úměrný nominálnímu času v rozmezí **±6 %**, plynule vzrůstá s délkou času (rychlost 1004 → 1078 ADU/s pro R od 1/4 s do 8 s). Proložené měření (8 s, 1 s, 8 s, 1 s…) vyloučilo drift lampy i pořadí: poměr 8 s / 1 s vychází stabilně **8,4** místo 8,0. Příčinou je nejspíš skutečná délka závěrky vůči nominální (Canon uvádí časy po třetinách EV); **zdroj neověřen**. Pro pipeline to nevadí, protože světlé snímky, darky a flaty se vždy berou při **stejném čase**; porovnávat signál napříč různými časy ale nelze s přesností lepší než ~5 %.
-- **Zbývá:** UV flat (rovnoměrně fluoreskující plocha) a stacking na fluoreskující scéně: scéna je nafocená, viz níže.
-
-### Fluoreskující scéna pod UV (4. 11. 2026, 100D, ISO 100, f/8)
-
-Náhrada gelu: tři čáry zvýrazňovače různé intenzity na bílém papíře pod UV, přes pevný oranžový filtr. Pořízeno `tools/capture_series.py scene` (16× 4 s), `testdata/calib/` (necommituje se). Papír, zoom i ostření beze změny mezi sadami.
-
-- **Signál:** čáry svítí v R i G, papír na pozadí slabě fluoreskuje (R ≈ 740 ADU u UV 100 %), kanál B je slabý. Při 4 s lehce saturuje nejsilnější čára (0,14 % pixelů při UV 100 %, 0,05 % při UV 70 %), při 8 s již 0,9 %.
-- **Úroveň UV:** signál při **UV 70 % = 0,80–0,81 signálu při UV 100 %**, a to stejně v čarách i na pozadí, v R i G. Úroveň UV je tedy čisté násobení signálu (bez změny tvaru nebo spektra). „70 %" odpovídá ~81 % světla. UV úroveň se i tak ukládá do metadat a flat se pořizuje pro používanou úroveň.
-- **Darky 4 s** (16×, pro obě sady scény): bez světelného úniku, šum v čase 7,3 ADU jako dříve. **Teplých pixelů (> 20 ADU) je ale 2035 a silně horkých (> 100 ADU) 116**, ačkoli dřív při dvojnásobném čase 8 s bylo jen 421 (resp. 121). Darky 8 s a 30 s se fotily na začátku dne s „studeným" čipem, tyto po ~1,5 h focení (dlouhé expozice, živý view, UV série). Temný proud horkých pixelů tedy **silně závisí na teplotě čipu**; darky je nutné pořizovat hned po světlých snímcích a ve stejném stavu foťáku, jak plán už požaduje (kap. 9, ohřev čipu). Odečet darku z jiného času nebo jiné teploty nebude u teplých pixelů přesný; teplota zatím není měřena (EDSDK ji u 100D nevrací).
-- **Důsledek pro testy:** pro odečet darku na scéně 4 s použít darky 4 s (stejný stav čipu), ne darky 8 s.
-- **Využití:** sady slouží k testu stackingu (zisk SNR ≈ √N), srovnání kanálů R a G a testu zarovnání. Nejde o skutečný gel, takže tvar pruhů a mez detekce se tím neověří.
-
----
-
-## 11. Otevřené otázky
-
-- [x] Sestava: kovová skříň, foťák shora, UV 70/100 % + bílé světlo, pevný oranžový filtr, ostření jen AF.
-- [ ] Jaká barviva se používají? (Při SYBR ověřit, kolik signálu projde oranžovým filtrem.)
-- [ ] Jaký objektiv (model, STM?) a v jaké poloze zoomu se fotí?
-- [ ] Vlnová délka UV (302/312/365 nm) a odkud svítí bílé světlo (zespodu přes konverzní desku, nebo shora)?
-- [ ] Jaké jsou parametry oranžového filtru (typ, hrana propustnosti)?
-- [ ] Kdo bude aplikaci obsluhovat, jazyk rozhraní?
-- [ ] Kam ukládat výsledky (lokálně, síťový disk, elektronický laboratorní deník)?
-- [ ] Jedno PC, nebo víc stanic?
-- [ ] Python + PySide6 (výchozí), nebo C#?
-- [ ] Patří do v1 jednoduchá kvantifikace pruhů, nebo zůstane ve Fiji?
-- [ ] Spravuje laboratorní PC IT? Nebrání spouštění nepodepsaných aplikací?
-
----
-
-## 12. Do budoucna
-
-### Monochromatická kamera místo zrcadlovky
-
-Výhody pro gely: bez Bayerovy masky (všechny pixely sbírají emisi barviva), chlazení (stabilní, opakovatelné darky), elektronická závěrka, jednoduché SDK s Python wrapperem. Nevýhoda: obvykle potřebuje nainstalovaný USB ovladač (jednorázově administrátor). Architektura GelCam to unese – stačí nová implementace `Camera` (např. `AsiCamera` přes `zwoasi`); pipeline se zjednoduší (data jsou rovnou mono a lineární).
-
-Ceny zjištěné 30. 10. 2026 (evropští prodejci, s DPH, orientační):
-
-| Model | Typ | Cena |
+| Operation | Measured | Expected on the lab PC |
 | --- | --- | --- |
-| ZWO ASI678MM | mono, nechlazená, IMX678, 8,3 MP, 12 bit | ~380–425 € |
-| ZWO ASI533MM Pro | mono, chlazená, IMX533 1" 3008×3008, zero amp glow; potřebuje zdroj 12 V / 3 A | ~1 285–1 350 € |
-| QHY533M | mono, chlazená, IMX533 | ~1 199 € v akci, běžně ~1 450 € |
-| Player One Ares-M Pro | mono, chlazená, IMX533 | ~1 409 € |
-| Basler ace 2 a2A2600-64umBAS | průmyslová mono, 5,6 MP, napájení z USB, C-mount, SDK pypylon | ~569 $ (USA) |
+| Live view: JPEG decode + display LUT + histogram + sharpness | 4.9 ms per frame | 20–30 ms → 33–50 fps |
+| Sharpness (variance of Laplacian), full 960 × 640 | 2.6 ms | 10–16 ms |
+| Sharpness on half resolution | 0.2 ms | ~1 ms |
+| CR2 read + R channel extraction | 190 ms per frame | 0.8–1.1 s per frame |
+| 3σ clip + mean over 8 frames (4.5 Mpx) | 0.09 s | 0.4–0.6 s |
+| Whole 8-frame stack | 1.6 s | 7–10 s |
+| Phase correlation 512 × 512 | 2.8 ms | 10–17 ms |
 
-Doporučení: ASI533MM Pro nebo QHY533M; levný test přínosu mono kamery: ASI678MM. K tomu objektiv (C-mount nebo adaptér Canon EF) a u chlazených zdroj 12 V.
+**The CPU is not the problem; memory is.** The camera delivers ~16.5 fps, so even at 4–6× slower
+the live view loop has headroom. A series of 8 frames plus 16 darks will take on the order of
+half a minute, which is acceptable next to the exposure time itself.
 
-### Softwarový autofokus (přesunuto do v1)
+Baseline footprint with the window open: **156 MB** (numpy 27, rawpy +1, PySide6 +42,
+opencv +38, tifffile +11). On Windows expect 180–220 MB. Of a 2 GB machine, Windows 10 x64
+leaves roughly 700–1000 MB, so the pipeline must stay inside a few hundred MB.
 
-Live view s lupou na pruh markeru → kroky `DriveLensEvf` (Near/Far 1–3) → míra ostrosti (rozptyl Laplaciánu) → hledání maxima hrubě, pak jemně. Objektiv musí být v AF; při focení použít spoušť bez AF. Kvůli nedosažitelnému ostřicímu kroužku je to ve v1 jediný způsob ostření (viz kap. 3).
+Rules that follow, to be respected in `processing/`:
 
-### Rychlé ověření bez programování
+1. **Never hold all frames in RAM.** Holding 8 channels as one array peaked at **824 MB** —
+   that machine would swap. Read each CR2 once, write the extracted channel into a
+   `numpy.memmap` on disk (145 MB for 8 frames), then stack in horizontal tiles: measured peak
+   **374 MB** bare, **460–523 MB** with OpenCV and Pillow also loaded, at the same 1.6 s.
+   Measured breakdown of the 374 MB: 30 MB at start, +79 MB that LibRaw leaves resident after
+   eight reads even when nothing is kept, +148 MB of mapped file pages (reclaimable — the OS
+   drops them under pressure), +117 MB of tile buffers at 16 tiles. So this is a saving of
+   roughly 300–450 MB, not a return to the baseline; it should fit a 2 GB machine but must be
+   confirmed there with `tools/bench.py`. More tiles and releasing the LibRaw buffer promptly
+   are the levers if it does not. The same structure is what makes N = 32 possible at all,
+   which would be 580 MB held in RAM.
+2. **`float32` everywhere**, never let numpy promote to `float64`; it doubles every buffer.
+3. **Import `cv2` and `tifffile` lazily** — measured: the window opens at **108 MB** instead of
+   156 MB when neither is imported at startup, and neither is needed before alignment or
+   export. Phase correlation over numpy FFT would remove the OpenCV dependency altogether;
+   worth measuring.
+4. **Decouple the overlays from the frame rate.** Decode and LUT run per frame; the histogram
+   and the sharpness measure run on every second or fourth frame and on half-resolution data
+   (13× cheaper and precise enough for finding a focus maximum).
+5. **Live view off during a series** — already required because of sensor heating, and it also
+   frees the CPU for downloading and writing frames.
+6. **Trim the PyInstaller bundle**: exclude QtWebEngine, QtQuick, Qt3D and the other unused Qt
+   modules. On an HDD this is the difference between a few seconds and half a minute of startup.
 
-Série přes digiCamControl nebo N.I.N.A. → kalibrace a stacking v Sirilu (zarovnání vypnout, export lineárně). Ukáže reálný zisk na vašich gelech.
+If the machine turns out to be too slow anyway, the fallback is not a rewrite: capture and
+processing are separate, so the series can be shot on the lab PC and stacked elsewhere.
+
+## 9. Technical risks
+
+| Risk | Solution |
+| --- | --- |
+| EDSDK events require a Windows message loop in the correct thread | all camera communication in one dedicated thread with a message pump (or in the main Qt thread); GUI talks to it via queue/signals; inspiration in digiCamControl |
+| EDSDK does not check validity of set values – a wrong value can block the camera (error 99; a damaged 50D case reported) | set **only** values from `allowed_values()`, do not touch settings outside the necessary range, test carefully |
+| The latest EDSDK may not support 100D/500D | verify in stage 0; use the version with which the cameras work in digiCamControl |
+| EDSDK licence | do not commit DLLs or headers to git; verify the terms at registration |
+| 32/64 bit | 64-bit Python + 64-bit EDSDK, check at start |
+| Camera sleep / battery drain during a series | disable auto power off, mains adapter, resume the series from the last downloaded frame |
+| Sensor heating during live view | turn live view off before the series; take darks right after the series |
+| Shift of gel or camera during a series | shift detection, alignment or warning |
+| EOS Utility or digiCamControl holds the camera | check at start, understandable message "close the other application that uses the camera" |
+| Shutter wear | reasonable default N, frame counter |
+| Focusing ring unreachable, AF fails for weak fluorescence | focus under white light, software fine adjustment in steps, shutter release without AF, sharpness check at start of session |
+| Focus drifts after a zoom change or after the camera is switched off | refocus after each zoom change and at the start of the session; hold zoom at the marked position |
+| Light through the eyepiece during a long exposure | cover eyepiece; warning in the wizard |
 
 ---
 
-## 13. Odkazy
+## 10. Development stages
 
-- Canon Developer Programme (EDSDK): registrace přes web Canon (Canon Developer Community / Developer Programme pro Evropu). **Přístup schválen 4. 11. 2026.**
+Total approximately 4–6 weeks of focused work; estimates are indicative.
 
-### Jak vložit EDSDK do projektu
+**Status 4 Nov 2026 (stage 0 without capture done, see results below):** access to Canon EDSDK is approved. The order therefore changes: immediately after preparation **stage 0 and 1b (camera control)** go, and the pipeline (stage 2) runs in parallel on test data. Project skeleton, `Camera` interface, `MockCamera`, EDSDK layer (`src/gelcam/camera/edsdk/`), stage 0 diagnostic script (`tools/edsdk_smoke.py`), constants check against headers (`tools/check_edsdk_constants.py`) and basic window are set up; they await the first run on Windows with the camera.
 
-1. Stáhni z portálu Canon nejnovější EDSDK pro Windows a rozbal ho.
-2. Zkopíruj **64bitové** DLL (`EDSDK_64/Dll/EDSDK.dll`, `EdsImage.dll`) do `vendor/edsdk/Dll/` a hlavičky (`EDSDK/Header/*.h`) do `vendor/edsdk/Header/`.
-3. Spusť `uv run python tools/check_edsdk_constants.py` – porovná konstanty v `src/gelcam/camera/edsdk/constants.py` s hlavičkami.
-4. V poznámkách k vydání SDK ověř, že je **EOS 100D** v seznamu podporovaných modelů, a verzi SDK zapiš sem.
-5. `vendor/edsdk/` se necommituje (licence Canon).
-- digiCamControl (referenční implementace EDSDK v C#): https://github.com/dukus/digiCamControl
+| Stage | Content | Done when | Estimate |
+| --- | --- | --- | --- |
+| P. Preparation | repo, `uv`, structure, CI tests; capturing test sets; ~~EDSDK application~~ (approved 4 Nov) | repo runs, test data available | 1 day |
+| 2. Pipeline | `processing/` + CLI over stored RAW, synthetic tests | synthetic test confirms SNR gain ≈ √N and linearity | 3–5 days |
+| 1a. GUI over simulation | `Camera` interface, `MockCamera`, main window, live view, histogram | GUI runs without camera | 3–4 days |
+| 0. EDSDK verification | script: connect, read allowed values, set time and ISO, take picture, download RAW, one live view frame | works with 100D (and 500D) | 1–2 days |
+| 1b. EdsdkCamera | implementation of the interface over EDSDK, thread with message loop, reconnection, extending power-off timer, **AF in live view and step focus adjustment** | main screen works with a real 100D and can focus | 4–6 days |
+| 3. Wizard | 7 steps, exposure proposal, automatic darks, series | operator without instructions captures a processed image | 5 days |
+| 4. Profiles and export | dye profiles, flat library, metadata, folder structure | output passes integrity rules | 3–5 days |
+| 5. Pilot | tests on real gels, PyInstaller package, test without admin | one week of operation without blocking error | 1–2 weeks ongoing |
+
+### Test data to capture right away (via digiCamControl, RAW)
+
+- 16 light frames of one gel (same time, ISO 100–200, live view off),
+- 16 darks with the same time and ISO (transilluminator off, or cap),
+- 8 flats (uniformly lit board or empty gel with dye, same geometry) + 8 darks for the flats,
+- 1 set with a deliberately saturated marker (saturation detection test),
+- optionally 1 set with a small shift of the gel (alignment test),
+- record dye, filter, time, ISO, aperture, lens and distance.
+
+### Results of stage 0 (4 Nov 2026, Windows 11, Canon EOS 100D)
+
+- **SDK:** Canon EDSDK **13.21.10** (EDSDKv132110W, released 3 Mar 2026), 64-bit `EDSDK_64/Dll` used. The 100D is not explicitly listed in the release notes, yet it works.
+- `uv sync` and `uv run pytest`: 45 tests passed.
+- `check_edsdk_constants.py`: 62 constants checked. **Fixed 2 incorrect error codes:** `EDS_ERR_TAKE_PICTURE_NO_CARD_NG` 0x8D07 → **0x8D06**, `EDS_ERR_TAKE_PICTURE_CARD_PROTECT_NG` 0x8D0B → **0x8D08**. The "MISSING\" messages for `kEdsAccess_ReadWrite`, `kEdsFileCreateDisposition_CreateAlways`, `kEdsSaveTo_Both` are false alarms (implicit enum values, verified manually: 2, 1, 3).
+- `edsdk_smoke.py` without `--capture`: **10/10 steps**. Connection OK (serial no. (hidden)), property reading OK (battery 80 %, mode M), allowed values loaded (ISO 100–12800 + Auto, times Bulb–1/4000, apertures f/5.6–f/36), live view frame 960×640 at ~16.5 fps, live view shutdown OK.
+- Camera state during the test: ISO 800, 8\", f/8. For gels set ISO 100.
+- `edsdk_smoke.py --capture`: **11/11 steps.** Capture and download of RAW (`IMG_0001.CR2`, ~24 MB) works. The first attempt ended with JPEG, because the camera had JPEG quality set in the menu: **the application does not yet set image quality** (`Prop.IMAGE_QUALITY` is missing); add reading/setting from the allowed values list in stage 1b.
+- **Remaining:** see stage 1b results below.
+
+### Results of stage 1b (4 Nov 2026, EDSDK layer, Canon EOS 100D)
+
+- **`Prop.IMAGE_QUALITY`:** reading and setting only from values the camera returns (`EdsGetPropertyDesc`). The 100D offers JPEG variants, RAW+JPEG (0x640013) and RAW (0x64FF0F); M-RAW/S-RAW are not offered. `ensure_raw_quality(camera)` selects RAW without JPEG at full size and `capture()` calls it itself, so the operator does not have to watch the camera menu. Verified on the camera: after switching to JPEG, RAW was returned when shooting. On connection a warning is added if the camera does not save RAW.
+- **Reconnection:** `EdsdkCamera.reconnect()` (closes the connection, tries to establish a new one and returns the last set ISO, time and aperture). **Verified on an actual disconnection:** pulling and reconnecting the USB cable and switching the camera off/on (`tools/edsdk_reconnect_test.py`); loss of connection is detected within ~2 s and the connection is restored ~9 s after disconnection. The test revealed a bug: after a failed connection the SDK remained initialized and every further attempt ended with "EDSDK initialization: 0x2\"; fixed by cleanup (`EdsTerminateSDK`) on failure of `_connect`. Camera sleep (auto power off) not yet tested.
+- **Blocking applications:** before connecting, the code searches for running EOS Utility, digiCamControl, qDslrDashboard, Lightroom, Capture One, N.I.N.A. (`edsdk/blockers.py`). On a "camera not found/busy" error their names are added to the message, otherwise only to `warnings`.
+- **Already implemented before and now verified without error on 100D:** magnifier 5×/1×, `DoEvfAf` (autofocus), `DriveLensEvf` (Near/Far steps), shutter release without AF (`Completely_NonAF`), extension of the power-off timer (every 60 s + on `WillSoonShutDown`). `edsdk_smoke.py --focus --capture`: 19/19 steps.
+- **Focusing verified (4 Nov 2026, second attempt, contrasting scene with comparison comb):** from strong defocus, **AF** (`DoEvfAf`) gave a sharp image (sharpness measure 5.5 → 53, visually confirmed on the saved live view frame). Individual `DriveLensEvf` steps Near3/Far3 change sharpness smoothly and by small amounts (measure 5.5–8.9 over 12 steps), so they are suitable only for fine adjustment, not coarse setting; coarse focusing is done by AF. The first attempt on an empty scene showed nothing.
+- **Remaining from 1b:** test of camera sleep (auto power off).
+- **500D:** compatibility test **will not be done** (decision 4 Nov 2026, 500D will not be used). Only the 100D is supported; the code still reads allowed values from the camera.
+
+
+### Stage 2 pipeline procedure (4 Nov 2026)
+
+- **Done:** `processing/raw_io.py` (`RawFrame`, `read_raw`: CR2 via rawpy without demosaicing, file is not modified) and `processing/channel.py` (`select_channel` R/G/B without interpolation, G = average of the two G pixels in a 2×2 cell, half-resolution output; `saturation_mask`). Tests: synthetic mosaic (exact pixels, different CFA phase, odd dimensions, unchanged input) and a real CR2 from the 100D. `rawpy`, `tifffile` and `opencv-python-headless` are now common dependencies.
+- **Notes on CR2 from the 100D (IMG_0001.CR2):** visible area **5208 × 3476** (not 5184 × 3456, which is only the `crop_*` subset), pattern `RGBG` with R at top-left (`raw_pattern` [[0,1],[3,2]]), black level 2048/2048/2048/2047, R/G channel after selection 2604 × 1738.
+- **Saturation:** LibRaw reports `white_level` = **13,583** and **at ISO 100 it matches exactly** (see the time series below; hundreds of thousands of pixels exactly at 13,583). IMG_0001.CR2 was taken at ISO 800, where the real clipping is higher (**~15,304**); the saturation threshold therefore **depends on ISO**. The clipping mask therefore uses `white_level` from the header of the given frame, not a fixed number; pixels slightly above the threshold (hot pixels, noise) are also treated as saturated.
+- **Remaining from stage 2:** `calib` (master dark – median, master flat with `D_F`), `align` (phase correlation), `stack` (sigma clipping), `binning`, `export` (16-bit TIFF, preview, metadata), `pipeline` with a history of steps and tests: SNR gain ≈ √N, linearity, hot pixels after dark, vignetting after flat.
+
+### Measured darks and bias (4 Nov 2026, 100D, ISO 100, f/8)
+
+Taken with `tools/capture_series.py` (only values from `allowed_values`; camera settings are restored afterwards), 16 frames in each set, in `testdata/calib/` (not committed). Conditions: lights off, cabinet closed, eyepiece covered. Statistics on raw mosaics.
+
+| Set | mean above black | noise over time (σ) | pixels > median+20 ADU | pixels > median+100 ADU | max (median of 16) |
+| --- | --- | --- | --- | --- | --- |
+| bias 1/4000 s | 2047.5 ADU | 7.2–7.5 ADU | 7 | 1 | 2150 |
+| dark 8 s | 2047.5 ADU | 7.2–7.3 ADU | 421 | 121 | 9205 |
+| dark 30 s | 2047.2 ADU | 7.3–7.4 ADU | 2228 | 124 | 11090 |
+
+- **No light leak** and no doubling of time: the 30 s frame lasted 35.8 s, so long-exposure noise reduction is off and the darks are raw data.
+- **Black level** is in practice 2047.5 ADU in all colours and stable (drift of the mean < 1 ADU across the whole set); LibRaw reports 2048/2048/2048/2047, the 0.5 ADU difference is negligible, but the dark removes it in the same way.
+- **Noise over time ≈ 7.3 ADU** (readout noise at ISO 100, same for R, G, B and independent of time up to 30 s).
+- **No increase of average dark current and no amp glow:** the mean after 30 s does not differ from bias. The background is uniform.
+- **Hot pixels:** about **120 pixels** are strongly hot (> 100 ADU above background) already at 8 s and their number does not change at 30 s; the number of "warm" pixels (> 20 ADU) however grows with time: 7 → 421 → 2228 (of 18.1 Mpx). Darks must therefore have the **same time as the light frames**; bias as a substitute for a dark is not enough.
+- **Consequence for the pipeline:** master dark = median of 8–16 darks (noise after median ~2.2 ADU), `D_F` for the flat can be taken from a dark of the same time; a single frame with noise ~7.3 ADU is the main source of error at weak signal, so stacking pays off.
+
+### Measured flat and time series under white light (4 Nov 2026, 100D, ISO 100, f/8)
+
+White light through the fixed orange filter, white matte paper across the whole field, zoom and focus unchanged. Taken with `tools/capture_series.py` (`flat`, `ladder`), `testdata/calib/` (not committed).
+
+- **Flat:** 16× 8 s; in the centre R ≈ 8650 and G ≈ 4750 ADU above black (R ≈ 75 % of range), 0 % saturation, brightness variation between frames ±1 % without trend (the lamp does not heat up). **Vignetting: the corners have ~73–75 % of centre brightness** (G), which is exactly what the flat field corrects. Flat and dark times are identical (8 s), so we have `D_F` for it.
+- **Scene spectrum:** R : G : B ≈ 1 : 0.55 : 0.04 (white light through the orange filter). The B channel is not computed.
+- **Time series** (1/64 to 32 s of actual time, 2 frames per time, 12 times):
+  - **Saturation:** at ISO 100 clipping is exactly at **13,583** (= `white_level`, 4.3 million pixels at the same value). R saturates already at 16 s, G at 32 s. A few pixels are slightly above the threshold (max 14,962).
+  - **Gain:** the photon transfer curve gives **≈ 2.2 e⁻/ADU** (R and G after conversion to two G pixels; B is unreliable due to weak signal). Readout noise **≈ 6.7 ADU (~15 e⁻)**, matches the noise from bias (7.3 ADU).
+  - **Linearity:** the signal is proportional to nominal time within **±6 %**, grows smoothly with time length (rate 1004 → 1078 ADU/s for R from 1/4 s to 8 s). An interleaved measurement (8 s, 1 s, 8 s, 1 s…) excluded lamp drift and order: the ratio 8 s / 1 s comes out consistently **8.4** instead of 8.0. The cause is probably the real shutter duration versus nominal (Canon gives times in third-EV steps); **source not verified**. For the pipeline this does not matter, because light frames, darks and flats are always taken at the **same time**; comparing signal across different times cannot be done with accuracy better than ~5 %.
+- **Remaining:** UV flat (uniformly fluorescing area) and stacking on a fluorescent scene: the scene has been captured, see below.
+
+### Fluorescent scene under UV (4 Nov 2026, 100D, ISO 100, f/8)
+
+Gel substitute: three lines of highlighter of different intensity on white paper under UV, through the fixed orange filter. Taken with `tools/capture_series.py scene` (16× 4 s), `testdata/calib/` (not committed). Paper, zoom and focus unchanged between sets.
+
+- **Signal:** the lines glow in R and G, the paper in the background weakly fluoresces (R ≈ 740 ADU at UV 100 %), the B channel is weak. At 4 s the strongest line slightly saturates (0.14 % of pixels at UV 100 %, 0.05 % at UV 70 %), at 8 s already 0.9 %.
+- **UV level:** signal at **UV 70 % = 0.80–0.81 of the signal at UV 100 %**, the same for lines and background, in R and G. The UV level is thus a pure multiplication of the signal (no change of shape or spectrum). "70 %" corresponds to ~81 % of the light. The UV level is nonetheless stored in metadata and the flat is taken for the level in use.
+- **Darks 4 s** (16×, for both scene sets): no light leak, noise over time 7.3 ADU as before. **Warm pixels (> 20 ADU) are however 2035 and strongly hot (> 100 ADU) 116**, although earlier at double the time (8 s) there were only 421 (resp. 121). The darks 8 s and 30 s were taken at the start of the day with a "cold" sensor, these after ~1.5 h of shooting (long exposures, live view, UV series). The dark current of hot pixels therefore **strongly depends on sensor temperature**; darks must be taken immediately after the light frames and in the same camera state, as the plan already requires (ch. 9, sensor heating). Subtracting a dark from a different time or temperature will not be accurate for warm pixels; temperature is not measured yet (EDSDK does not return it for the 100D).
+- **Consequence for tests:** for dark subtraction on the 4 s scene use darks 4 s (same sensor state), not darks 8 s.
+- **Use:** the sets serve for the stacking test (SNR gain ≈ √N), comparison of the R and G channels and the alignment test. It is not a real gel, so the band shape and detection limit are not verified by it.
+
+---
+
+## 11. Open questions
+
+- [x] Setup: metal cabinet, camera from above, UV 70/100 % + white light, fixed orange filter, focusing by AF only.
+- [ ] Which dyes are used? (For SYBR verify how much signal passes the orange filter.)
+- [ ] Which lens (model, STM?) and at what zoom position is shooting done?
+- [ ] UV wavelength (302/312/365 nm) and where does the white light come from (below through a conversion plate, or from above)?
+- [ ] What are the parameters of the orange filter (type, transmission edge)?
+- [x] **UI language: English, with option to switch** (decided 10 Nov 2026). Texts via Qt `tr()`, translations in `.ts`/`.qm`, Czech as second language.
+- [ ] Who will operate the application?
+- [ ] Where to store results (locally, network drive, electronic laboratory notebook)?
+- [ ] One PC, or several stations?
+- [ ] Python + PySide6 (default), or C#?
+- [ ] Should simple band quantification belong to v1, or remain in Fiji?
+- [ ] Does the lab PC IT manage it? Do they prevent running unsigned applications?
+
+---
+
+## 12. Future
+
+### Monochrome camera instead of DSLR
+
+Advantages for gels: no Bayer mask (all pixels collect the dye emission), cooling (stable, repeatable darks), electronic shutter, simple SDK with a Python wrapper. Disadvantage: usually requires an installed USB driver (one-time administrator). The GelCam architecture can handle it – a new `Camera` implementation is enough (e.g. `AsiCamera` via `zwoasi`); the pipeline is simplified (data are directly mono and linear).
+
+Prices found 30 Oct 2026 (European sellers, incl. VAT, indicative):
+
+| Model | Type | Price |
+| --- | --- | --- |
+| ZWO ASI678MM | mono, uncooled, IMX678, 8.3 MP, 12 bit | ~380–425 € |
+| ZWO ASI533MM Pro | mono, cooled, IMX533 1\" 3008×3008, zero amp glow; needs a 12 V / 3 A power supply | ~1,285–1,350 € |
+| QHY533M | mono, cooled, IMX533 | ~1,199 € on sale, normally ~1,450 € |
+| Player One Ares-M Pro | mono, cooled, IMX533 | ~1,409 € |
+| Basler ace 2 a2A2600-64umBAS | industrial mono, 5.6 MP, USB-powered, C-mount, pypylon SDK | ~569 $ (USA) |
+
+Recommendation: ASI533MM Pro or QHY533M; cheap test of the benefit of a mono camera: ASI678MM. Plus a lens (C-mount or Canon EF adapter) and, for cooled models, a 12 V power supply.
+
+### Software autofocus (moved to v1)
+
+Live view with the magnifier on the marker band → `DriveLensEvf` steps (Near/Far 1–3) → sharpness measure (variance of the Laplacian) → coarse search for the maximum, then fine. The lens must be in AF; for shooting use shutter release without AF. Because the focusing ring is unreachable, this is the only way of focusing in v1 (see ch. 3).
+
+### Quick verification without programming
+
+Series via digiCamControl or N.I.N.A. → calibration and stacking in Siril (turn alignment off, export linearly). Shows the real gain on your gels.
+
+---
+
+## 13. Links
+
+- Canon Developer Programme (EDSDK): registration via the Canon website (Canon Developer Community / Developer Programme for Europe). **Access approved 4 Nov 2026.**
+
+### How to insert EDSDK into the project
+
+1. Download the latest EDSDK for Windows from the Canon portal and unpack it.
+2. Copy the **64-bit** DLLs (`EDSDK_64/Dll/EDSDK.dll`, `EdsImage.dll`) into `vendor/edsdk/Dll/` and the headers (`EDSDK/Header/*.h`) into `vendor/edsdk/Header/`.
+3. Run `uv run python tools/check_edsdk_constants.py` – it compares the constants in `src/gelcam/camera/edsdk/constants.py` with the headers.
+4. In the SDK release notes verify that the **EOS 100D** is in the list of supported models, and record the SDK version here.
+5. `vendor/edsdk/` is not committed (Canon licence).
+- digiCamControl (reference EDSDK implementation in C#): https://github.com/dukus/digiCamControl
 - edsdk-python (Jiloc): https://github.com/Jiloc/edsdk-python
 - pyedsdk (PyPI): https://pypi.org/project/pyedsdk/
-- edsdk4j (varování k chybě 99): https://github.com/WolfgangFahl/edsdk4j
+- edsdk4j (warning about error 99): https://github.com/WolfgangFahl/edsdk4j
 - Siril: https://siril.org
 - N.I.N.A.: https://nighttime-imaging.eu
 - rawpy: https://pypi.org/project/rawpy/
@@ -465,6 +651,6 @@ Série přes digiCamControl nebo N.I.N.A. → kalibrace a stacking v Sirilu (zar
 
 ---
 
-## 14. Úvodní prompt pro první session v Claude Code
+## 14. Opening prompt for the first session in Claude Code
 
-> Přečti si `CLAUDE.md` a `docs/GELCAM_PLAN.md`. Kostra projektu a vrstva EDSDK už existují. Na tomto Windows PC je připojený Canon EOS 100D a EDSDK je ve `vendor/edsdk/`. Spusť `uv sync`, `uv run pytest`, pak `uv run python tools/check_edsdk_constants.py` a `uv run python tools/edsdk_smoke.py` (nejdřív bez `--capture`). Opravuj, co nepůjde, a výsledky etapy 0 zapiš do plánu. Ptej se, když narazíš na nejasnost.
+> Read `CLAUDE.md` and `docs/GELCAM_PLAN.md`. The project skeleton and the EDSDK layer already exist. A Canon EOS 100D is connected to this Windows PC and EDSDK is in `vendor/edsdk/`. Run `uv sync`, `uv run pytest`, then `uv run python tools/check_edsdk_constants.py` and `uv run python tools/edsdk_smoke.py` (first without `--capture`). Fix whatever does not work, and record the results of stage 0 in the plan. Ask when you encounter an ambiguity.

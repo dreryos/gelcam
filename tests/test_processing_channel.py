@@ -10,7 +10,7 @@ REAL = Path(__file__).resolve().parents[1] / "testdata" / "edsdk_smoke" / "IMG_0
 
 
 def make_frame(h: int = 8, w: int = 8, pattern=((0, 1), (3, 2)), white: int = 1000) -> RawFrame:
-    """RGGB mozaika, kde každý pixel nese jednoznačnou hodnotu (řádek*100 + sloupec)."""
+    """RGGB mosaic where each pixel carries a unique value (row*100 + column)."""
     yy, xx = np.mgrid[0:h, 0:w]
     mosaic = (yy * 100 + xx).astype(np.uint16)
     pat = np.array(pattern, dtype=np.uint8)
@@ -22,7 +22,7 @@ def test_red_channel_is_exact_pixels_no_interpolation():
     f = make_frame()
     r = select_channel(f, "R")
     assert r.shape == (4, 4)
-    # R je vlevo nahoře v buňce: pixely (0,0), (0,2), (2,0) …
+    # R is at the top left of the cell: pixels (0,0), (0,2), (2,0) …
     assert r[0, 0] == f.mosaic[0, 0] and r[1, 2] == f.mosaic[2, 4]
     assert np.array_equal(r, f.mosaic[0::2, 0::2])
 
@@ -62,13 +62,13 @@ def test_saturation_mask_and_black_level():
     f = make_frame(white=300)
     m = saturation_mask(f, "R")
     assert m.shape == (4, 4)
-    assert not m[0, 0] and m[3, 3]  # R na (6,6) = 606 >= 300
-    assert f.black_level("G") == 11.0  # průměr dvou G
+    assert not m[0, 0] and m[3, 3]  # R at (6,6) = 606 >= 300
+    assert f.black_level("G") == 11.0  # mean of two G
     with pytest.raises(ValueError):
         select_channel(f, "X")
 
 
-@pytest.mark.skipif(not REAL.exists(), reason="testdata/ chybí (necommituje se)")
+@pytest.mark.skipif(not REAL.exists(), reason="testdata/ missing (not committed)")
 def test_real_cr2():
     f = read_raw(REAL)
     assert f.mosaic.dtype == np.uint16 and f.mosaic.shape == (3476, 5208)

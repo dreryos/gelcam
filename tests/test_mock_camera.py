@@ -28,7 +28,7 @@ def test_set_only_allowed(cam):
     cam.set(Prop.ISO, allowed[-1])
     assert cam.get(Prop.ISO) == allowed[-1]
     with pytest.raises(ValueNotAllowedError):
-        cam.set(Prop.ISO, 0x49)  # kód, který foťák nenabízí
+        cam.set(Prop.ISO, 0x49)  # code the camera does not offer
 
 
 def test_read_only_props(cam):

@@ -1,7 +1,7 @@
-"""Načtení RAW (CR2) do nedemozaikované mozaiky a popis jejího CFA vzoru.
+"""Loading RAW (CR2) into a non-demosaiced mosaic and describing its CFA pattern.
 
-Pravidlo projektu: RAW se nikdy nemění a nedemozaikuje. `RawFrame` drží
-surová čísla ze snímače tak, jak je vrátil LibRaw (`raw_image_visible`).
+Project rule: RAW is never modified or demosaiced. `RawFrame` holds
+the raw sensor numbers exactly as returned by LibRaw (`raw_image_visible`).
 """
 
 from __future__ import annotations
@@ -14,17 +14,17 @@ import numpy as np
 
 @dataclass(frozen=True)
 class RawFrame:
-    """Jedna nedemozaikovaná expozice."""
+    """One non-demosaiced exposure."""
 
-    #: mozaika (H, W) uint16 – viditelná část snímače, surové hodnoty (včetně black levelu)
+    #: mosaic (H, W) uint16 – visible part of the sensor, raw values (including black level)
     mosaic: np.ndarray
-    #: index barvy každého pixelu v mozaice (H, W) uint8, indexuje `color_desc`
+    #: color index of each pixel in the mosaic (H, W) uint8, indexes `color_desc`
     colors: np.ndarray
-    #: písmena barev podle indexu, např. "RGBG" (index 3 je druhé G)
+    #: color letters by index, e.g. "RGBG" (index 3 is the second G)
     color_desc: str
-    #: black level pro každý index barvy (délka = len(color_desc))
+    #: black level for each color index (length = len(color_desc))
     black_levels: tuple[float, ...]
-    #: úroveň, od které LibRaw považuje pixel za plný (konzervativní hranice saturace)
+    #: level from which LibRaw considers a pixel full (conservative saturation limit)
     white_level: int
     source: str = ""
 
@@ -34,20 +34,20 @@ class RawFrame:
 
     @property
     def cfa_pattern(self) -> np.ndarray:
-        """Vzor 2×2 s indexy barev vlevo nahoře viditelné oblasti."""
+        """2×2 pattern of color indices at the top left of the visible area."""
         return self.colors[:2, :2]
 
     def black_level(self, letter: str) -> float:
-        """Průměrný black level pro barvu zadanou písmenem (R, G, B)."""
+        """Mean black level for the color given by a letter (R, G, B)."""
         idx = [i for i, ch in enumerate(self.color_desc) if ch == letter]
         if not idx:
-            raise ValueError(f"Barva {letter!r} není v CFA ({self.color_desc})")
+            raise ValueError(f"Color {letter!r} is not in the CFA ({self.color_desc})")
         return float(np.mean([self.black_levels[i] for i in idx]))
 
 
 def read_raw(path: str | Path) -> RawFrame:
-    """Načte CR2 přes rawpy bez demozaikování; soubor se nijak nemění."""
-    import rawpy  # těžká závislost, načítá se až při použití
+    """Loads CR2 via rawpy without demosaicing; the file is not modified in any way."""
+    import rawpy  # heavy dependency, imported only when used
 
     path = Path(path)
     with rawpy.imread(str(path)) as raw:

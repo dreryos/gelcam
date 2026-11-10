@@ -1,4 +1,4 @@
-"""Okno nad MockCamera: připojení, live view, nastavení hodnoty a snímek (bez displeje)."""
+"""Window over MockCamera: connection, live view, setting a value and an image (without a display)."""
 
 import os
 import time

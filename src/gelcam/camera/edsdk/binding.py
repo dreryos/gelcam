@@ -1,8 +1,8 @@
-"""Tenký ctypes binding nad EDSDK.dll.
+"""Thin ctypes binding over EDSDK.dll.
 
-Modul se dá importovat i mimo Windows (kvůli testům); knihovna se načítá
-až voláním `load()`. Všechna volání EDSDK smí běžet jen ve vlákně
-`EdsdkWorker` (viz worker.py).
+The module can be imported outside Windows (for tests); the library is loaded
+only when `load()` is called. All EDSDK calls may run only on the
+`EdsdkWorker` thread (see worker.py).
 """
 
 from __future__ import annotations
@@ -23,8 +23,8 @@ EdsInt32 = c_int32
 EdsBool = c_int32
 
 if sys.platform == "win32":
-    _FUNCTYPE = ctypes.WINFUNCTYPE  # EDSAPI = __stdcall (na x64 bez rozdílu)
-else:  # pragma: no cover - jen kvůli importu mimo Windows
+    _FUNCTYPE = ctypes.WINFUNCTYPE  # EDSAPI = __stdcall (no difference on x64)
+else:  # pragma: no cover - only for importing outside Windows
     _FUNCTYPE = ctypes.CFUNCTYPE
 
 ObjectEventHandler = _FUNCTYPE(EdsError, EdsUInt32, EdsBaseRef, c_void_p)
@@ -78,9 +78,9 @@ def _diritem_struct(size_type: type) -> type[Structure]:
 
 
 def diritem_size_is_64bit(header_dir: Path | None) -> bool:
-    """Novější EDSDK (13.x) mají `EdsUInt64 size`, starší `EdsUInt32 size`.
+    """Newer EDSDK (13.x) use `EdsUInt64 size`, older ones use `EdsUInt32 size`.
 
-    Rozhoduje hlavička, pokud je k dispozici; jinak se předpokládá novější SDK.
+    The header decides if it is available; otherwise the newer SDK is assumed.
     """
     if header_dir is None:
         return True
@@ -96,7 +96,7 @@ def diritem_size_is_64bit(header_dir: Path | None) -> bool:
 
 
 def default_vendor_dir() -> Path:
-    """`vendor/edsdk` vedle zdrojáků, nebo vedle exe v zabaleném buildu."""
+    """`vendor/edsdk` next to the sources, or next to the exe in a packaged build."""
     env = os.environ.get("GELCAM_EDSDK_DIR")
     if env:
         return Path(env)
@@ -106,21 +106,21 @@ def default_vendor_dir() -> Path:
 
 
 class Edsdk:
-    """Načtená knihovna se signaturami funkcí."""
+    """Loaded library with function signatures."""
 
     def __init__(self, vendor_dir: Path | None = None) -> None:
         vendor_dir = vendor_dir or default_vendor_dir()
         dll_dir = vendor_dir / "Dll" if (vendor_dir / "Dll").exists() else vendor_dir
         dll_path = dll_dir / "EDSDK.dll"
         if sys.platform != "win32":
-            raise OSError("EDSDK pro Windows lze načíst jen na Windows.")
+            raise OSError("The Windows EDSDK can only be loaded on Windows.")
         if not dll_path.exists():
             raise FileNotFoundError(
-                f"Nenalezeno {dll_path}. Zkopírujte 64bitové DLL z EDSDK do vendor/edsdk/Dll/."
+                f"Not found: {dll_path}. Copy the 64-bit DLLs from EDSDK into vendor/edsdk/Dll/."
             )
         if ctypes.sizeof(c_void_p) != 8:
-            raise OSError("GelCam vyžaduje 64bitový Python (EDSDK_64).")
-        os.add_dll_directory(str(dll_dir))  # EdsImage.dll se načte ze stejné složky
+            raise OSError("GelCam requires 64-bit Python (EDSDK_64).")
+        os.add_dll_directory(str(dll_dir))  # EdsImage.dll is loaded from the same folder
         self.dll = ctypes.WinDLL(str(dll_path))  # type: ignore[attr-defined]
         header_dir = vendor_dir / "Header"
         self.DirectoryItemInfo = _diritem_struct(
@@ -165,7 +165,7 @@ class Edsdk:
         self._fn("EdsDownloadEvfImage", EdsBaseRef, EdsBaseRef)
         self._fn("EdsGetPointer", EdsBaseRef, P(c_void_p))
         self._fn("EdsGetLength", EdsBaseRef, P(c_uint64))
-        # EdsGetEvent existuje jen v novějších SDK; když chybí, stačí message pump.
+        # EdsGetEvent exists only in newer SDKs; if missing, the message pump is enough.
         try:
             self._fn("EdsGetEvent")
             self.has_get_event = True
@@ -174,7 +174,7 @@ class Edsdk:
 
 
 def check(err: int, what: str) -> None:
-    """Převede chybový kód na výjimku s českou zprávou."""
+    """Converts an error code to an exception with a readable message."""
     if err == C.EDS_ERR_OK:
         return
     from ..base import CameraBusyError, CameraError

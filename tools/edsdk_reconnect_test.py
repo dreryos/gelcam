@@ -1,9 +1,9 @@
-"""Ruční test obnovení spojení: odpojte kabel USB nebo foťák vypněte a znovu zapněte.
+"""Manual reconnection test: unplug the USB cable or switch the camera off and on again.
 
     uv run python tools/edsdk_reconnect_test.py [--duration 300]
 
-Skript každé 2 s čte z foťáku stav baterie. Když čtení selže, vypíše chybu
-a zkouší `reconnect()`, dokud se spojení neobnoví. Na konci vypíše přehled.
+Every 2 s the script reads the battery state from the camera. When a read fails, it prints the error
+and tries `reconnect()` until the connection is restored. At the end it prints a summary.
 """
 
 from __future__ import annotations
@@ -21,13 +21,13 @@ from gelcam.camera.edsdk import EdsdkCamera  # noqa: E402
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--duration", type=float, default=300.0, help="jak dlouho test běží (s)")
+    ap.add_argument("--duration", type=float, default=300.0, help="how long the test runs (s)")
     args = ap.parse_args()
 
     cam = EdsdkCamera()
     info = cam.connect()
-    print(f"Připojeno: {info.model}. Nyní odpojte kabel USB (nebo foťák vypněte), počkejte pár sekund "
-          "a pak ho zase připojte (zapněte).")
+    print(f"Connected: {info.model}. Now unplug the USB cable (or switch the camera off), wait a few seconds "
+          "and then plug it back in (switch it on).")
     t_end = time.time() + args.duration
     outages: list[float] = []
     down_since: float | None = None
@@ -37,19 +37,19 @@ def main() -> int:
                 batt = cam.get(Prop.BATTERY)
                 if down_since is not None:
                     outages.append(time.time() - down_since)
-                    print(f"{time.strftime('%H:%M:%S')}  spojení obnoveno po {outages[-1]:.1f} s, baterie {batt}")
+                    print(f"{time.strftime('%H:%M:%S')}  connection restored after {outages[-1]:.1f} s, battery {batt}")
                     down_since = None
                 else:
-                    print(f"{time.strftime('%H:%M:%S')}  OK, baterie {batt}")
+                    print(f"{time.strftime('%H:%M:%S')}  OK, battery {batt}")
                 time.sleep(2.0)
             except CameraError as exc:
                 if down_since is None:
                     down_since = time.time()
-                    print(f"{time.strftime('%H:%M:%S')}  SPOJENÍ ZTRACENO: {exc}")
+                    print(f"{time.strftime('%H:%M:%S')}  CONNECTION LOST: {exc}")
                 try:
                     cam.reconnect(attempts=1, delay=0.0)
                 except CameraError as exc2:
-                    print(f"{time.strftime('%H:%M:%S')}  zkouším obnovit… ({exc2})")
+                    print(f"{time.strftime('%H:%M:%S')}  trying to restore… ({exc2})")
                     time.sleep(3.0)
     except KeyboardInterrupt:
         pass
@@ -58,7 +58,7 @@ def main() -> int:
             cam.disconnect()
         except Exception:  # noqa: BLE001
             pass
-    print(f"\nVýpadků: {len(outages)}" + (f", doby obnovení: {', '.join(f'{o:.1f} s' for o in outages)}"
+    print(f"\nOutages: {len(outages)}" + (f", restore times: {', '.join(f'{o:.1f} s' for o in outages)}"
                                          if outages else ""))
     return 0 if down_since is None else 1
 

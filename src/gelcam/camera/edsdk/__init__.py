@@ -1,4 +1,4 @@
-"""Ovládání foťáků Canon přes oficiální EDSDK (jen Windows, 64 bit)."""
+"""Control of Canon cameras via the official EDSDK (Windows only, 64-bit)."""
 
 from .camera import EdsdkCamera
 

@@ -1,6 +1,6 @@
-"""Generátor syntetických gelů se známým signálem a šumem.
+"""Generator of synthetic gels with a known signal and noise.
 
-Používá ho `MockCamera` (live view, snímky) i testy pipeline.
+Used by `MockCamera` (live view, images) and by the pipeline tests.
 """
 
 from __future__ import annotations
@@ -15,14 +15,14 @@ class SyntheticGel:
     height: int = 480
     width: int = 720
     lanes: int = 8
-    #: relativní intenzity pruhů v každé dráze (dvojnásobné ředění)
+    #: relative band intensities in each lane (two-fold dilution)
     band_rows: tuple[float, ...] = (0.25, 0.4, 0.55, 0.7)
     lane_scale: tuple[float, ...] = field(default_factory=lambda: tuple(2.0 ** -i for i in range(8)))
     background: float = 0.05
     vignetting: float = 0.3
 
     def signal(self) -> np.ndarray:
-        """Bezšumový obraz signálu (float, max ~1)."""
+        """Noise-free signal image (float, max ~1)."""
         h, w = self.height, self.width
         yy, xx = np.mgrid[0:h, 0:w].astype(np.float64)
         img = np.full((h, w), self.background)
@@ -37,7 +37,7 @@ class SyntheticGel:
         return img
 
     def flat_field(self) -> np.ndarray:
-        """Vinětace a nerovnoměrnost lampy (normalizováno na průměr 1)."""
+        """Vignetting and lamp non-uniformity (normalized to mean 1)."""
         h, w = self.height, self.width
         yy, xx = np.mgrid[0:h, 0:w].astype(np.float64)
         r2 = ((xx - w / 2) / (w / 2)) ** 2 + ((yy - h / 2) / (h / 2)) ** 2
@@ -56,7 +56,7 @@ def expose(
     dark_current: float = 5.0,
     hot_pixels: np.ndarray | None = None,
 ) -> np.ndarray:
-    """Jedna expozice: Poissonův šum + temný proud + čtecí šum + black level, 14bit."""
+    """One exposure: Poisson noise + dark current + readout noise + black level, 14-bit."""
     electrons = rng.poisson(np.clip(signal * photons + dark_current, 0, None)).astype(np.float64)
     if hot_pixels is not None:
         electrons += hot_pixels
@@ -65,7 +65,7 @@ def expose(
 
 
 def to_preview_rgb(signal: np.ndarray, rng: np.random.Generator | None = None) -> np.ndarray:
-    """Náhled podobný live view: oranžová fluorescence na tmavém pozadí, uint8 RGB."""
+    """Live-view-like preview: orange fluorescence on a dark background, uint8 RGB."""
     s = signal / max(float(signal.max()), 1e-9)
     if rng is not None:
         s = np.clip(s + rng.normal(0, 0.02, s.shape), 0, 1)

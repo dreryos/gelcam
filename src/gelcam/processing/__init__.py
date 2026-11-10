@@ -1,1 +1,1 @@
-"""Zpracování RAW snímků: čisté funkce nad numpy poli, bez závislosti na foťáku."""
+"""RAW image processing: pure functions on numpy arrays, independent of the camera."""

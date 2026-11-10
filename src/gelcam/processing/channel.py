@@ -1,7 +1,7 @@
-"""Výběr jednoho barevného kanálu z CFA mozaiky bez demozaikování.
+"""Selects one color channel from a CFA mosaic without demosaicing.
 
-Žádná interpolace: kanál R nebo B jsou přímo pixely daného filtru, kanál G je
-průměr dvou G pixelů v každé buňce 2×2. Výsledek má poloviční rozlišení.
+No interpolation: the R or B channel consists directly of the pixels of that filter, and the G channel is
+the mean of two G pixels in each 2×2 cell. The result has half the resolution.
 """
 
 from __future__ import annotations
@@ -14,13 +14,13 @@ CHANNELS = ("R", "G", "B")
 
 
 def _cell_positions(frame: RawFrame, letter: str) -> list[tuple[int, int]]:
-    """Pozice (řádek, sloupec) v buňce 2×2, kde je filtr dané barvy."""
+    """Positions (row, column) in the 2×2 cell where the filter of the given color is."""
     if letter not in CHANNELS:
-        raise ValueError(f"Neznámý kanál {letter!r}, povoleno: {CHANNELS}")
+        raise ValueError(f"Unknown channel {letter!r}, allowed: {CHANNELS}")
     pat = frame.cfa_pattern
     pos = [(dy, dx) for dy in range(2) for dx in range(2) if frame.color_desc[int(pat[dy, dx])] == letter]
     if not pos:
-        raise ValueError(f"Barva {letter!r} není v CFA ({frame.color_desc})")
+        raise ValueError(f"Color {letter!r} is not in the CFA ({frame.color_desc})")
     return pos
 
 
@@ -30,12 +30,12 @@ def _plane(array: np.ndarray, positions: list[tuple[int, int]]) -> np.ndarray:
 
 
 def select_channel(frame: RawFrame, letter: str) -> np.ndarray:
-    """Surové hodnoty kanálu (včetně black levelu) jako float32 o rozměru (H/2, W/2)."""
+    """Raw channel values (including black level) as float32 with shape (H/2, W/2)."""
     planes = _plane(frame.mosaic, _cell_positions(frame, letter))
     return np.mean(planes, axis=0, dtype=np.float32)
 
 
 def saturation_mask(frame: RawFrame, letter: str) -> np.ndarray:
-    """True tam, kde je aspoň jeden pixel kanálu v buňce na úrovni `white_level` nebo výš."""
+    """True where at least one channel pixel in the cell is at `white_level` or above."""
     planes = _plane(frame.mosaic, _cell_positions(frame, letter))
     return np.any([p >= frame.white_level for p in planes], axis=0)

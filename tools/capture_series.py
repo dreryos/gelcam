@@ -1,15 +1,15 @@
-"""Pořídí sérii RAW snímků pro kalibraci přes EdsdkCamera.
+"""Captures a series of RAW images for calibration via EdsdkCamera.
 
     uv run python tools/capture_series.py dark --tv 8 --tv 30 --n 16
     uv run python tools/capture_series.py bias --n 16
     uv run python tools/capture_series.py flat --tv 1/60 --n 16 --name bile
     uv run python tools/capture_series.py ladder --tv 1/4000 --tv 1/2000 ... --n 2
 
-dark, bias: světla zhasnutá, skříň zavřená, okulár zakrytý; první snímek se
-zkontroluje na světelný únik. flat, ladder: rozsvícená rovnoměrná plocha,
-`ladder` je řada časů (linearita, saturace, zisk), `flat` jeden čas, `scene` nehybná scéna (stacking), `--note` do metadat.
-Výstup: testdata/calib/<den>_<druh>_<čas>_iso<ISO>/ s CR2 a metadata.json.
-Nastavení foťáku (ISO, čas, clona) se po skončení vrátí na původní hodnoty.
+dark, bias: lights off, cabinet closed, eyepiece covered; the first image is
+checked for light leaks. flat, ladder: an evenly lit surface,
+`ladder` is a series of times (linearity, saturation, gain), `flat` one time, `scene` a static scene (stacking), `--note` into the metadata.
+Output: testdata/calib/<day>_<kind>_<time>_iso<ISO>/ with CR2 files and metadata.json.
+Camera settings (ISO, shutter speed, aperture) are restored to their original values at the end.
 """
 
 from __future__ import annotations
@@ -31,14 +31,14 @@ from gelcam.processing.channel import select_channel  # noqa: E402
 from gelcam.processing.raw_io import read_raw  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1] / "testdata" / "calib"
-LEAK_LIMIT_ADU = 15.0  # průměr nad black levelem při ISO 100; tma je řádově jednotky
+LEAK_LIMIT_ADU = 15.0  # mean above black level at ISO 100; dark frames are on the order of units
 
 
 def find_code(cam, prop: Prop, label_fn, wanted: str) -> int:
     for code in cam.allowed_values(prop):
         if label_fn(code) == wanted:
             return code
-    raise SystemExit(f"Foťák nenabízí {wanted!r} pro {prop.value}.")
+    raise SystemExit(f"Camera does not offer {wanted!r} for {prop.value}.")
 
 
 def stats(path: Path) -> dict:
@@ -54,22 +54,22 @@ def stats(path: Path) -> dict:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("kind", choices=["dark", "bias", "flat", "ladder", "scene"])
-    ap.add_argument("--tv", action="append", default=[], help='čas, např. 8 nebo 30 (v s); u bias se ignoruje')
+    ap.add_argument("--tv", action="append", default=[], help='shutter time, e.g. 8 or 30 (in s); ignored for bias')
     ap.add_argument("--n", type=int, default=16)
     ap.add_argument("--iso", type=int, default=100)
     ap.add_argument("--name", default="")
-    ap.add_argument("--note", default="", help="popis scény/osvětlení do metadat, např. 'UV 100 %%'")
+    ap.add_argument("--note", default="", help="description of the scene/lighting for the metadata, e.g. 'UV 100 %%'")
     args = ap.parse_args()
 
     tv_labels = ['1/4000'] if args.kind == "bias" else [f'{t}"' if "/" not in t else t for t in args.tv]
     if not tv_labels:
-        raise SystemExit("Zadejte aspoň jeden --tv (u darků).")
+        raise SystemExit("Specify at least one --tv (for darks).")
 
     cam = EdsdkCamera()
     info = cam.connect()
-    print(f"Připojeno: {info.model}")
+    print(f"Connected: {info.model}")
     for w in cam.warnings:
-        print("UPOZORNĚNÍ:", w)
+        print("WARNING:", w)
     original = {p: int(cam.get(p)) for p in (Prop.ISO, Prop.TV, Prop.AV)}
     day = datetime.now().strftime("%Y-%m-%d")
     code = 1
@@ -91,7 +91,7 @@ def main() -> int:
                 durations.append(time.perf_counter() - t0)
                 dest = out / f"{args.kind}_{tag}_{i:02d}.CR2"
                 if dest.exists():
-                    raise SystemExit(f"{dest} už existuje, nepřepisuji.")
+                    raise SystemExit(f"{dest} already exists, not overwriting.")
                 tmp.rename(dest)
                 files.append(dest.name)
                 if args.kind in ("flat", "ladder", "scene"):
@@ -102,19 +102,19 @@ def main() -> int:
                     centre = float(g[h // 3:2 * h // 3, w // 3:2 * w // 3].mean())
                     corner = float(np.mean([g[:h // 8, :w // 8].mean(), g[:h // 8, -w // 8:].mean(),
                                             g[-h // 8:, :w // 8].mean(), g[-h // 8:, -w // 8:].mean()]))
-                    print(f"  {i:2d}/{args.n} {dest.name} G střed {centre:8.1f} ADU, rohy/střed {corner / centre:.2f}, "
-                          f"saturováno {sat * 100:.2f} % ({durations[-1]:.1f} s)")
+                    print(f"  {i:2d}/{args.n} {dest.name} G centre {centre:8.1f} ADU, corners/centre {corner / centre:.2f}, "
+                          f"saturated {sat * 100:.2f} % ({durations[-1]:.1f} s)")
                     continue
                 if i == 1:
                     st = stats(dest)
-                    print(f"  1. snímek: průměr nad black levelem R {st['R']['mean']:.2f}, G {st['G']['mean']:.2f}, "
-                          f"B {st['B']['mean']:.2f} ADU; trvání {durations[0]:.1f} s")
+                    print(f"  1st image: mean above black level R {st['R']['mean']:.2f}, G {st['G']['mean']:.2f}, "
+                          f"B {st['B']['mean']:.2f} ADU; duration {durations[0]:.1f} s")
                     if args.kind == "dark" and max(st[c]["mean"] for c in "RGB") > LEAK_LIMIT_ADU:
-                        print("  CHYBA: světelný únik (snímek není tmavý). Zhasněte světla, zavřete skříň, zakryjte okulár.")
+                        print("  ERROR: light leak (image is not dark). Turn off the lights, close the cabinet, cover the eyepiece.")
                         return 2
                     if tv_s and tv_s >= 1 and durations[0] > 1.8 * tv_s + 3:
-                        print("  UPOZORNĚNÍ: snímek trval skoro dvojnásobek času. Je zapnutá redukce šumu při dlouhé "
-                              "expozici? Vypněte ji v menu foťáku, jinak darky nejsou surová data.")
+                        print("  WARNING: the image took almost twice the set time. Is long-exposure noise reduction "
+                              "enabled? Turn it off in the camera menu, otherwise the darks are not raw data.")
                 print(f"  {i:2d}/{args.n} {dest.name} ({durations[-1]:.1f} s)")
             tmpdir = out / "_tmp"
             if tmpdir.exists() and not any(tmpdir.iterdir()):
@@ -125,8 +125,8 @@ def main() -> int:
                 "n": args.n, "files": files, "started": datetime.now().isoformat(timespec="seconds"),
                 "capture_durations_s": [round(d, 2) for d in durations],
                 "first_frame_stats_adu": stats(out / files[0]),
-                "note": ("dark/bias: světla zhasnutá, skříň zavřená, okulár zakrytý" if args.kind in ("dark", "bias")
-                         else "rozsvícená scéna; zoom a ostření beze změny") + (f" | {args.note}" if args.note else ""),
+                "note": ("dark/bias: lights off, cabinet closed, eyepiece covered" if args.kind in ("dark", "bias")
+                         else "lights on, scene; zoom and focus unchanged") + (f" | {args.note}" if args.note else ""),
             }
             (out / "metadata.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
         code = 0
@@ -135,9 +135,9 @@ def main() -> int:
             try:
                 cam.set(prop, val)
             except Exception as exc:  # noqa: BLE001
-                print(f"Nepodařilo se vrátit {prop.value}: {exc}")
+                print(f"Could not restore {prop.value}: {exc}")
         cam.disconnect()
-    print("\nHotovo. Nastavení foťáku vráceno na původní hodnoty.")
+    print("\nDone. Camera settings restored to the original values.")
     return code
 
 

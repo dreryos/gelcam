@@ -1,58 +1,58 @@
 # GelCam
 
-Desktopová aplikace pro Windows na focení agarózových gelů (PCR) zrcadlovkou Canon EOS 100D přes USB. Live view, průvodce pořízením snímku a fyzikálně poctivé zpracování (stacking, dark, flat, výběr kanálu, binning) s lineárním 16bitovým exportem.
+Desktop application for Windows for photographing agarose gels (PCR) with a Canon EOS 100D DSLR over USB. Live view, a capture wizard and physically sound processing (stacking, dark frame, flat field, channel selection, binning) with linear 16-bit export.
 
-Celý plán, technické detaily a historie rozhodnutí: **`docs/GELCAM_PLAN.md`**. Před větší změnou si přečti příslušnou kapitolu.
+The full plan, technical details and decision history: **`docs/GELCAM_PLAN.md`**. Before any major change, read the relevant chapter.
 
 ## Hardware
 
-- Kovová skříň, Canon EOS 100D zanořený shora, pevný oranžový filtr, UV lampa 70/100 % a bílé světlo.
-- Zoom ručně měnitelný, **ostřicí kroužek nedosažitelný** → ostření jen AF (v aplikaci přes EDSDK: AF v live view + posun po krocích). Spoušť vždy bez AF.
-- Zoom a úroveň UV jsou součást kalibrace a metadat. Dark = zhasnutá světla, zavřená skříň, zakrytý okulár.
+- Metal cabinet, Canon EOS 100D inserted from above, fixed orange filter, UV lamp at 70/100 % and white light.
+- Zoom manually adjustable, **focus ring not reachable** → focusing by AF only (in the app via EDSDK: AF in live view + stepwise movement). The shutter release always runs without AF.
+- Zoom and UV level are part of the calibration and metadata. Dark frame = lights off, cabinet closed, eyepiece covered.
 
-## Stav
+## Status
 
-- Fáze: etapa 0 a 1b (ovládání 100D přes EDSDK) hotové a ověřené na foťáku, etapa 2 (pipeline) rozpracovaná: `processing/raw_io.py`, `channel.py`. Další krok `calib` (master dark/flat). Podrobnosti a naměřené hodnoty v `docs/GELCAM_PLAN.md`.
-- Testovací RAW sady (světlé, dark, flat) jsou v `testdata/` (necommitují se).
+- Phase: stages 0 and 1b (100D control via EDSDK) complete and verified on the camera; stage 2 (pipeline) in progress: `processing/raw_io.py`, `channel.py`. Next step `calib` (master dark/flat). Details and measured values in `docs/GELCAM_PLAN.md`; current checklist and next steps in **`STATUS.md`**.
+- Test RAW sets (light frames, dark frames, flat fields) are in `testdata/` (not committed).
 
 ## Stack
 
-- Python 3.12 **x64**, správa prostředí `uv`
+- Python 3.12 **x64**, environment management with `uv`
 - PySide6 (GUI), numpy, rawpy, tifffile, opencv-python-headless, Pillow
-- Canon EDSDK přes ctypes (`src/gelcam/camera/edsdk/`), DLL a hlavičky v `vendor/edsdk/`
+- Canon EDSDK via ctypes (`src/gelcam/camera/edsdk/`), DLLs and headers in `vendor/edsdk/`
 - pytest, PyInstaller (onedir)
 
-## Příkazy
+## Commands
 
-- `uv sync` – instalace závislostí
-- `uv run pytest` – testy
-- `uv run python -m gelcam` – spuštění aplikace (`--mock` bez foťáku)
-- `uv run python tools/check_edsdk_constants.py` – kontrola konstant EDSDK proti hlavičkám
-- `uv run python tools/edsdk_smoke.py [--capture]` – diagnostika etapy 0 (Windows + 100D)
+- `uv sync` – install dependencies
+- `uv run pytest` – tests
+- `uv run python -m gelcam` – run the application (`--mock` without a camera)
+- `uv run python tools/check_edsdk_constants.py` – check EDSDK constants against the headers
+- `uv run python tools/edsdk_smoke.py [--capture]` – stage 0 diagnostics (Windows + 100D)
 
-## Architektura v kostce
+## Architecture in brief
 
-`ui/` → `acquisition/` → `camera/` (rozhraní `Camera`, implementace `MockCamera`, `EdsdkCamera`) a `processing/` → `storage/`. GUI ani řízení snímání nesmí volat EDSDK přímo; vše jde přes rozhraní `Camera`.
+`ui/` → `acquisition/` → `camera/` (interface `Camera`, implementations `MockCamera`, `EdsdkCamera`) and `processing/` → `storage/`. Neither the GUI nor acquisition control may call EDSDK directly; everything goes through the `Camera` interface.
 
-## Práce na více systémech
+## Working on multiple systems
 
-- UI, `acquisition/`, `processing/` a testy se vyvíjejí a spouštějí na Windows, macOS i Linuxu (`uv sync`, `uv run python -m gelcam --mock`, `uv run pytest`). Pro vývoj UI bez foťáku slouží `MockCamera`; rozšiřuj ji, když UI potřebuje další chování (histogram, chyby, ztráta spojení).
-- Jen na Windows: `EdsdkCamera` (EDSDK.dll přes ctypes, message loop), práce s foťákem, závěrečné ověření UI (písma, DPI), PyInstaller. Kód mimo `camera/edsdk/` nesmí importovat EDSDK ani nic z Windows API.
-- `vendor/edsdk/` a `testdata/` se na novém počítači doplňují ručně (viz README); v gitu nejsou.
+- The UI, `acquisition/`, `processing/` and the tests are developed and run on Windows, macOS and Linux (`uv sync`, `uv run python -m gelcam --mock`, `uv run pytest`). For UI development without a camera, `MockCamera` is used; extend it when the UI needs further behavior (histogram, errors, loss of connection).
+- Windows only: `EdsdkCamera` (EDSDK.dll via ctypes, message loop), work with the camera, final UI verification (fonts, DPI), PyInstaller. Code outside `camera/edsdk/` must not import EDSDK or anything from the Windows API.
+- `vendor/edsdk/` and `testdata/` are added manually on a new computer (see README); they are not in git.
 
-## Pravidla, která neporušovat
+## Rules not to break
 
-1. **Integrita dat:** původní RAW se nikdy nemění. `result.tif` obsahuje jen lineární operace na celém obrazu. Jas, kontrast, gamma a inverze ovlivňují jen náhled. Každý krok zpracování se zapisuje do `metadata.json`.
-2. **Žádný AI denoising.** Klasický denoise jen volitelně a jako samostatný soubor.
-3. **Pracovat s RAW, ne s JPEG.** Výběr kanálu z CFA mozaiky bez demozaikování (EtBr/GelRed → R, SYBR → G).
-4. **Hodnoty do foťáku nastavovat jen ze seznamu povolených hodnot, který foťák vrátí.** EDSDK nekontroluje platnost hodnot a špatné nastavení může foťák zablokovat (chyba 99).
-5. **EDSDK jen v jednom vlákně s Windows message loop.** GUI komunikuje přes frontu nebo Qt signály.
-6. **Bez administrátorských práv:** nic nezapisovat do Program Files ani registru; nastavení do `%APPDATA%\GelCam`. Žádné závislosti, které vyžadují instalaci ovladačů.
-7. **Licence Canon:** obsah `vendor/edsdk/` ani `testdata/` nikdy necommitovat.
-8. Kód musí jít vyvíjet a testovat bez připojeného foťáku (MockCamera, syntetická data v `src/gelcam/testing/synthetic.py`).
+1. **Data integrity:** the original RAW files are never modified. `result.tif` contains only linear operations applied to the whole image. Brightness, contrast, gamma and inversion affect only the preview. Every processing step is written to `metadata.json`.
+2. **No AI denoising.** Classical denoising only optionally and as a separate file.
+3. **Work with RAW, not JPEG.** Channel selection from the CFA mosaic without demosaicing (EtBr/GelRed → R, SYBR → G).
+4. **Set camera values only from the list of allowed values that the camera returns.** EDSDK does not validate values, and a wrong setting can lock up the camera (error 99).
+5. **EDSDK only on one thread, with the Windows message loop.** The GUI communicates via a queue or Qt signals.
+6. **No administrator rights:** write nothing to Program Files or the registry; settings go to `%APPDATA%\GelCam`. No dependencies that require installing drivers.
+7. **Canon license:** never commit the contents of `vendor/edsdk/` or `testdata/`.
+8. Code must be developable and testable without a connected camera (MockCamera, synthetic data in `src/gelcam/testing/synthetic.py`).
 
-## Konvence
+## Conventions
 
-- Kód a identifikátory anglicky, rozhraní aplikace a dokumentace česky.
-- Typové anotace, malé čisté funkce v `processing/` (numpy pole dovnitř i ven), testy ke každému kroku pipeline.
-- Nové poznatky a rozhodnutí doplňovat do `docs/GELCAM_PLAN.md`.
+- **Everything in English**: code, identifiers, comments, documentation and the application interface. User-facing texts go through Qt `tr()` + `.ts`/`.qm` (Czech as a translation), no hard-coded strings.
+- Type annotations, small pure functions in `processing/` (numpy arrays in and out), tests for every pipeline step.
+- Add new findings and decisions to `docs/GELCAM_PLAN.md`.

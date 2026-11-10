@@ -1,39 +1,39 @@
 # GelCam
 
-Aplikace pro Windows na focení agarózových gelů zrcadlovkou Canon EOS 100D přes USB: live view, průvodce pořízením snímku a fyzikálně poctivé zpracování (stacking, dark frame, flat field, výběr barevného kanálu, binning) s lineárním 16bitovým exportem pro kvantifikaci.
+Windows application for photographing agarose gels with a Canon EOS 100D DSLR over USB: live view, a capture wizard, and physically sound processing (stacking, dark frame, flat field, color channel selection, binning) with linear 16-bit export for quantification.
 
-Stav: ovládání foťáku přes EDSDK ověřeno na 100D (live view, AF, RAW, obnovení spojení); pipeline zpracování je rozpracovaná (načtení RAW, výběr kanálu).
+Status: camera control via EDSDK verified on the 100D (live view, AF, RAW, connection recovery); the processing pipeline is in progress (RAW loading, channel selection).
 
-## Spuštění
+## Running
 
 ```
 uv sync
-uv run python -m gelcam --mock      # bez foťáku (simulace)
-uv run python -m gelcam             # Canon EOS 100D přes EDSDK (Windows)
+uv run python -m gelcam --mock      # without a camera (simulation)
+uv run python -m gelcam             # Canon EOS 100D over EDSDK (Windows)
 uv run pytest                       # testy
 ```
 
-Pro skutečný foťák zkopírujte 64bitové DLL z Canon EDSDK do `vendor/edsdk/Dll/` a hlavičky do `vendor/edsdk/Header/`, pak spusťte `uv run python tools/check_edsdk_constants.py` a `uv run python tools/edsdk_smoke.py`.
+For a real camera, copy the 64-bit DLLs from the Canon EDSDK into `vendor/edsdk/Dll/` and the headers into `vendor/edsdk/Header/`, then run `uv run python tools/check_edsdk_constants.py` and `uv run python tools/edsdk_smoke.py`.
 
-## Nastavení na jiném počítači (Windows)
+## Setup on another computer (Windows)
 
-1. Nainstalujte Git a `uv` (bez administrátora stačí `winget install astral-sh.uv`, nebo viz https://docs.astral.sh/uv/).
-2. `git clone https://github.com/dreryos/gelcam` a v adresáři `uv sync` (stáhne Python 3.12 x64 a závislosti).
-3. `uv run pytest` – testy běží bez foťáku (simulace). Testy nad skutečnými RAW se bez složky `testdata/` přeskočí.
-4. **Canon EDSDK** (jen pro práci s foťákem): stáhněte ho z Canon Developer Programme (testováno s verzí 13.21.10, `EDSDKv132110W`), zkopírujte 64bitové `EDSDK_64/Dll/*.dll` do `vendor/edsdk/Dll/` a `EDSDK/Header/*.h` do `vendor/edsdk/Header/`, pak `uv run python tools/check_edsdk_constants.py` a `uv run python tools/edsdk_smoke.py`. Složka `vendor/` se nikdy necommituje (licence Canon).
-5. Zavřete EOS Utility, digiCamControl a podobné programy, než spustíte aplikaci s foťákem.
-6. **Testovací snímky** (`testdata/`, CR2 z 100D, asi 2,6 GB) nejsou v gitu; viz dohodnutý způsob sdílení v `docs/GELCAM_PLAN.md`. Bez nich jde vyvíjet nad syntetickými daty (`src/gelcam/testing/synthetic.py`) a `MockCamera`.
+1. Install Git and `uv` (without administrator rights, `winget install astral-sh.uv` is enough; otherwise see https://docs.astral.sh/uv/).
+2. `git clone https://github.com/dreryos/gelcam`, then run `uv sync` in the directory (downloads Python 3.12 x64 and the dependencies).
+3. `uv run pytest` – the tests run without a camera (simulated). Tests that use real RAW files are skipped when the `testdata/` folder is absent.
+4. **Canon EDSDK** (only needed for camera work): download it from the Canon Developer Programme (tested with version 13.21.10, `EDSDKv132110W`), copy the 64-bit `EDSDK_64/Dll/*.dll` into `vendor/edsdk/Dll/` and `EDSDK/Header/*.h` into `vendor/edsdk/Header/`, then run `uv run python tools/check_edsdk_constants.py` and `uv run python tools/edsdk_smoke.py`. The `vendor/` folder is never committed (Canon license).
+5. Close EOS Utility, digiCamControl and similar programs before starting the application with the camera.
+6. **Test images** (`testdata/`, CR2 from the 100D, about 2.6 GB) are not in git; see the agreed sharing method in `docs/GELCAM_PLAN.md`. Without them, development can proceed on synthetic data (`src/gelcam/testing/synthetic.py`) and `MockCamera`.
 
-## Práce na jiném systému než Windows (macOS, Linux)
+## Working on a system other than Windows (macOS, Linux)
 
-Na UI a zpracování snímků jde pracovat kdekoli; jen práce se skutečným foťákem je vázaná na Windows.
+UI and image processing can be worked on anywhere; only work with a real camera is tied to Windows.
 
-- **Funguje všude:** UI v PySide6 a `uv run python -m gelcam --mock` (simulovaný foťák `MockCamera`), pipeline (`rawpy`, `numpy`, `tifffile`, `opencv-python-headless` mají balíčky pro macOS i Linux), testy (`uv run pytest`) a syntetická data (`src/gelcam/testing/synthetic.py`). Testy nad skutečnými CR2 se bez složky `testdata/` přeskočí. Na macOS nainstalujte `uv` např. přes `brew install uv`.
-- **Jen Windows:** skutečný foťák (`EdsdkCamera` volá `EDSDK.dll` přes `ctypes` a zpracovává zprávy Windows), závěrečné ověření vzhledu a chování UI (písma, škálování displeje, rozložení oken se mohou lišit), balení PyInstallerem a test bez administrátora.
-- **Praxe:** UI stavět nad `MockCamera` (live view, histogram, ostření, chyby spojení musí simulace pokrývat); cokoli, co se týká foťáku, ověřit na Windows s připojeným 100D. Nic v `ui/` ani `acquisition/` nesmí volat EDSDK přímo, jen rozhraní `Camera`, jinak se kód na jiném systému nespustí.
+- **Works everywhere:** the PySide6 UI and `uv run python -m gelcam --mock` (simulated camera `MockCamera`), the pipeline (`rawpy`, `numpy`, `tifffile`, `opencv-python-headless` have packages for macOS and Linux), the tests (`uv run pytest`) and synthetic data (`src/gelcam/testing/synthetic.py`). Tests that use real CR2 files are skipped when the `testdata/` folder is absent. On macOS, install `uv` e.g. with `brew install uv`.
+- **Windows only:** the real camera (`EdsdkCamera` calls `EDSDK.dll` via `ctypes` and handles Windows messages), final verification of UI appearance and behavior (fonts, display scaling, window layout may differ), packaging with PyInstaller, and a test without administrator rights.
+- **Practice:** build the UI on top of `MockCamera` (live view, histogram, focusing, connection errors must be covered by the simulation); anything that concerns the camera is verified on Windows with the 100D connected. Nothing in `ui/` or `acquisition/` may call EDSDK directly, only the `Camera` interface; otherwise the code will not run on a non-Windows system.
 
-- Plán, architektura a historie rozhodnutí: [docs/GELCAM_PLAN.md](docs/GELCAM_PLAN.md)
-- Kontext pro Claude Code: [CLAUDE.md](CLAUDE.md)
-- Návod na nafocení testovacích dat: [docs/TESTOVACI_DATA.md](docs/TESTOVACI_DATA.md)
+- Plan, architecture and decision history: [docs/GELCAM_PLAN.md](docs/GELCAM_PLAN.md)
+- Context for Claude Code: [CLAUDE.md](CLAUDE.md)
+- Guide to capturing test data: [docs/TESTOVACI_DATA.md](docs/TESTOVACI_DATA.md)
 
-Canon EDSDK není součástí repozitáře; získejte ho přes Canon Developer Programme a vložte do `vendor/edsdk/`.
+The Canon EDSDK is not part of the repository; obtain it through the Canon Developer Programme and place it in `vendor/edsdk/`.

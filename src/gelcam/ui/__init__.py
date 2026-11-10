@@ -1,1 +1,1 @@
-"""Grafické rozhraní (PySide6)."""
+"""Graphical user interface (PySide6)."""

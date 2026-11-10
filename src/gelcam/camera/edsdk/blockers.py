@@ -1,11 +1,11 @@
-"""Detekce aplikací, které mohou držet foťák (EDSDK pak foťák nevidí)."""
+"""Detects applications that may hold the camera (EDSDK then cannot see the camera)."""
 
 from __future__ import annotations
 
 import subprocess
 import sys
 
-#: Názvy procesů (malými písmeny, bez .exe), které typicky obsazují USB spojení s foťákem.
+#: Process names (lowercase, without .exe) that typically hold the USB connection to the camera.
 KNOWN_BLOCKERS: dict[str, str] = {
     "eos utility": "EOS Utility",
     "eos utility 3": "EOS Utility 3",
@@ -22,7 +22,7 @@ KNOWN_BLOCKERS: dict[str, str] = {
 
 
 def parse_tasklist(output: str) -> list[str]:
-    """Z výstupu `tasklist /fo csv /nh` vybere názvy známých blokujících aplikací."""
+    """From the output of `tasklist /fo csv /nh`, picks the names of known blocking applications."""
     found: list[str] = []
     for line in output.splitlines():
         line = line.strip()
@@ -38,7 +38,7 @@ def parse_tasklist(output: str) -> list[str]:
 
 
 def find_blockers() -> list[str]:
-    """Názvy běžících aplikací, které mohou držet foťák. Mimo Windows prázdný seznam."""
+    """Names of running applications that may hold the camera. Empty list outside Windows."""
     if sys.platform != "win32":
         return []
     try:

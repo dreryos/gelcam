@@ -1,7 +1,7 @@
-"""Převody kódů ISO, času a clony (Canon EDSDK) na čitelné hodnoty.
+"""Conversions of ISO, shutter speed and aperture codes (Canon EDSDK) to readable values.
 
-Kódy jsou logaritmické: 8 jednotek = 1 EV. Převody slouží jen k zobrazení
-a výpočtům expozice; do foťáku se vždy posílá původní kód z jeho seznamu.
+The codes are logarithmic: 8 units = 1 EV. The conversions are used only for display
+and exposure calculations; the original code from the camera's list is always sent to the camera.
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ def _nearest(series: list[float], value: float) -> float:
 
 
 def iso_value(code: int) -> int | None:
-    """Kód ISO → nominální ISO; None pro Auto."""
+    """ISO code → nominal ISO; None for Auto."""
     if code == ISO_AUTO:
         return None
     raw = 100 * 2 ** ((code - ISO_100) / 8)
@@ -49,7 +49,7 @@ def iso_label(code: int) -> str:
 
 
 def tv_seconds(code: int) -> float | None:
-    """Kód času → délka v sekundách (nominální); None pro Bulb."""
+    """Shutter code → duration in seconds (nominal); None for Bulb."""
     if code == TV_BULB:
         return None
     raw = 2 ** ((TV_1S - code) / 8)
@@ -76,16 +76,16 @@ def av_label(code: int) -> str:
     return f"f/{av_fnumber(code):g}"
 
 
-# --- kvalita obrazu (EdsImageQuality) ---
-# Kód 0xSSTTJJKK: SS = velikost RAW, TT = typ RAW (0x64) nebo 0, JJ/KK = JPEG;
-# 0xFF0F v dolních 16 bitech znamená „bez druhého snímku“.
+# --- image quality (EdsImageQuality) ---
+# Code 0xSSTTJJKK: SS = RAW size, TT = RAW type (0x64) or 0, JJ/KK = JPEG;
+# 0xFF0F in the lower 16 bits means "no second image".
 _Q_RAW_TYPE = 0x64
 _Q_NO_SECOND = 0xFF0F
 _Q_SIZES = {0: "L", 1: "M", 2: "S"}
 
 
 def is_raw_only(code: int) -> bool:
-    """True, když foťák ukládá jen RAW (bez JPEG)."""
+    """True when the camera saves RAW only (no JPEG)."""
     return (code >> 16) & 0xFF == _Q_RAW_TYPE and code & 0xFFFF == _Q_NO_SECOND
 
 
@@ -94,7 +94,7 @@ def has_raw(code: int) -> bool:
 
 
 def preferred_raw_quality(allowed: list[int]) -> int | None:
-    """Z nabízených kódů vybere RAW bez JPEG v plné velikosti (jinak None)."""
+    """From the offered codes, picks full-size RAW without JPEG (otherwise None)."""
     candidates = [c for c in allowed if is_raw_only(c)]
     full = [c for c in candidates if (c >> 24) & 0xFF == 0]
     return (full or candidates or [None])[0]

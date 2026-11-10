@@ -1,1 +1,1 @@
-"""Pomůcky pro vývoj a testy bez foťáku."""
+"""Helpers for development and tests without a camera."""

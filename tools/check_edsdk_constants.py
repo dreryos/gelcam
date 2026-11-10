@@ -1,10 +1,10 @@
-"""Porovná konstanty v gelcam.camera.edsdk.constants s hlavičkami Canon EDSDK.
+"""Compares the constants in gelcam.camera.edsdk.constants with the Canon EDSDK headers.
 
-Použití:
-    uv run python tools/check_edsdk_constants.py [cesta/k/Header]
+Usage:
+    uv run python tools/check_edsdk_constants.py [path/to/Header]
 
-Výchozí cesta je vendor/edsdk/Header. Skript nic nemění, jen vypíše rozdíly
-a vrátí nenulový kód, pokud nějaký najde.
+The default path is vendor/edsdk/Header. The script changes nothing, it only prints differences
+and returns a non-zero exit code if it finds any.
 """
 
 from __future__ import annotations
@@ -39,25 +39,25 @@ def compare(ours: dict[str, int], theirs: dict[str, int]) -> tuple[list[str], li
         if name not in theirs:
             missing.append(name)
         elif theirs[name] != val:
-            mismatched.append(f"{name}: GelCam 0x{val:X}, hlavička 0x{theirs[name]:X}")
+            mismatched.append(f"{name}: GelCam 0x{val:X}, header 0x{theirs[name]:X}")
     return mismatched, missing
 
 
 def main(argv: list[str]) -> int:
     header_dir = Path(argv[1]) if len(argv) > 1 else ROOT / "vendor" / "edsdk" / "Header"
     if not header_dir.exists():
-        print(f"Složka s hlavičkami neexistuje: {header_dir}")
+        print(f"Header folder does not exist: {header_dir}")
         return 2
     theirs = parse_headers(header_dir)
     mismatched, missing = compare(constants.CHECKED, theirs)
-    print(f"Zkontrolováno {len(constants.CHECKED)} konstant proti {header_dir}")
+    print(f"Checked {len(constants.CHECKED)} constants against {header_dir}")
     print(f"EdsDirectoryItemInfo.size: {'64' if diritem_size_is_64bit(header_dir) else '32'} bit")
     for line in mismatched:
-        print("NESEDÍ  ", line)
+        print("MISMATCH", line)
     for name in missing:
-        print("CHYBÍ   ", name, "(v hlavičkách nenalezeno – ověřit ručně)")
+        print("MISSING ", name, "(not found in headers – verify manually)")
     if not mismatched and not missing:
-        print("Vše sedí.")
+        print("All match.")
     return 1 if mismatched else 0
 
 

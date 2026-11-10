@@ -1,4 +1,4 @@
-"""Testy částí vrstvy EDSDK, které jdou spustit bez Windows a bez SDK."""
+"""Tests for parts of the EDSDK layer that can run without Windows and without the SDK."""
 
 import importlib.util
 import threading

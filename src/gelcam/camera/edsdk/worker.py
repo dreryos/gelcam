@@ -1,9 +1,9 @@
-"""Jedno vlákno, které vlastní EDSDK.
+"""A single thread that owns EDSDK.
 
-EDSDK na Windows doručuje události (např. „snímek je připravený ke stažení“)
-přes zprávy Windows, takže vlákno, které SDK inicializovalo, musí běžet
-s COM v režimu STA a pravidelně zpracovávat frontu zpráv. Všechna volání
-SDK se proto posílají sem přes `call()` a čekají na výsledek.
+On Windows, EDSDK delivers events (e.g. an image ready for download)
+via Windows messages, so the thread that initializes the SDK must run
+with COM in STA mode and regularly process the message queue. All calls
+to the SDK are therefore sent here via `call()` and wait for the result.
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ class _MSG(ctypes.Structure):
 
 
 def _make_pump() -> Callable[[], None]:
-    """Zpracuje čekající zprávy Windows; mimo Windows nic nedělá."""
+    """Processes pending Windows messages; does nothing outside Windows."""
     if sys.platform != "win32":
         return lambda: None
     user32 = ctypes.windll.user32  # type: ignore[attr-defined]
@@ -50,7 +50,7 @@ def _make_pump() -> Callable[[], None]:
 
 
 class EdsdkWorker:
-    """Vlákno s frontou úloh, message pumpou a periodickými úlohami."""
+    """Thread with a task queue, message pump and periodic tasks."""
 
     def __init__(self, name: str = "edsdk", poll_interval: float = 0.01) -> None:
         self._tasks: queue.Queue[tuple[Callable[[], Any], Future] | None] = queue.Queue()
@@ -62,7 +62,7 @@ class EdsdkWorker:
         self._thread.start()
         self._started.wait()
 
-    # --- veřejné API (volá se z libovolného vlákna) ---
+    # --- public API (callable from any thread) ---
     def call(self, fn: Callable[..., Any], *args: Any, timeout: float | None = 30.0, **kwargs: Any) -> Any:
         if threading.current_thread() is self._thread:
             return fn(*args, **kwargs)
@@ -71,11 +71,11 @@ class EdsdkWorker:
         return fut.result(timeout=timeout)
 
     def every(self, interval: float, fn: Callable[[], None]) -> None:
-        """Spouští `fn` ve vlákně SDK každých `interval` sekund (registrovat ve vlákně SDK)."""
+        """Runs `fn` on the SDK thread every `interval` seconds (register on the SDK thread)."""
         self._periodic.append((interval, time.monotonic() + interval, fn))
 
     def wait_until(self, predicate: Callable[[], bool], timeout: float) -> bool:
-        """Ve vlákně SDK: čeká na podmínku a mezitím zpracovává zprávy Windows."""
+        """On the SDK thread: waits for a condition while processing Windows messages."""
         deadline = time.monotonic() + timeout
         while not predicate():
             if time.monotonic() > deadline:
@@ -92,7 +92,7 @@ class EdsdkWorker:
     def thread(self) -> threading.Thread:
         return self._thread
 
-    # --- vlákno ---
+    # --- thread ---
     def _run(self) -> None:
         if sys.platform == "win32":
             ctypes.windll.ole32.CoInitializeEx(None, COINIT_APARTMENTTHREADED)  # type: ignore[attr-defined]
@@ -113,7 +113,7 @@ class EdsdkWorker:
                     continue
                 try:
                     fut.set_result(fn())
-                except BaseException as exc:  # noqa: BLE001 - předá se volajícímu
+                except BaseException as exc:  # noqa: BLE001 - passed on to the caller
                     fut.set_exception(exc)
         finally:
             if sys.platform == "win32":
@@ -126,5 +126,5 @@ class EdsdkWorker:
                 self._periodic[i] = (interval, now + interval, fn)
                 try:
                     fn()
-                except Exception:  # noqa: BLE001 - periodická úloha nesmí shodit vlákno
+                except Exception:  # noqa: BLE001 - a periodic task must not crash the thread
                     pass
