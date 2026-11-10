@@ -98,7 +98,7 @@ def test_full_walk(env):
     assert meta["test_frames"] and meta["flat"].startswith("skipped")
     assert meta["lens"] == {"name": "EF-S 18-55mm f/3.5-5.6 IS STM (simulation)", "focal_length_mm": 35.0}
     assert wiz.focal_label.text() == "current focal length: 35 mm"
-    assert not list(folder.rglob("result.tif"))
+    assert not list(folder.rglob("result.tif"))  # no result.tif unless Process was clicked
     for prop, code in sent:
         assert code in cam.allowed_values(prop)
 
@@ -201,3 +201,26 @@ def test_redundant_live_view_is_noop(env, monkeypatch):
     assert _wait(app, lambda: not ctrl._pool._work_queue.qsize())
     time.sleep(0.1)
     assert not n
+
+
+def test_process_button_writes_result(env):
+    app, _ctrl, _cam, wiz, _sent, _root = env
+    wiz.gel_name.setText("proc")
+    wiz.btn_next.click()
+    folder = wiz.folder
+    for _ in range(4):  # 2 -> 3 -> 4 -> 5 -> 6
+        wiz.btn_next.click()
+    assert _wait(app, lambda: wiz.applied)
+    _series(app, wiz, 4)
+    wiz.btn_next.click()  # -> 7
+    wiz.btn_process.click()
+    assert not wiz.btn_next.isEnabled()  # Finish waits for processing
+    assert _wait(app, lambda: wiz.processed or wiz.status.isVisible(), timeout=60)
+    assert wiz.processed, wiz.status.text()
+    assert (folder / "result.tif").exists() and (folder / "preview.png").exists()
+    assert not (folder / "work").exists()
+    assert "→" in wiz.proc_stats.text() and wiz.btn_next.isEnabled()
+    wiz.btn_next.click()
+    assert wiz.result() == wiz.DialogCode.Accepted
+    meta = json.loads((folder / "metadata.json").read_text())
+    assert meta["status"] == "processed" and meta["processing"] and meta["result"] == "result.tif"

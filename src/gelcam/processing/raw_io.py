@@ -27,6 +27,8 @@ class RawFrame:
     #: level from which LibRaw considers a pixel full (conservative saturation limit)
     white_level: int
     source: str = ""
+    #: official image area (top, left, height, width) in visible-mosaic coordinates; None if unknown
+    image_area: tuple[int, int, int, int] | None = None
 
     @property
     def shape(self) -> tuple[int, int]:
@@ -52,6 +54,9 @@ def read_raw(path: str | Path) -> RawFrame:
     path = Path(path)
     with rawpy.imread(str(path)) as raw:
         desc = raw.color_desc.decode("ascii")
+        sz = raw.sizes
+        area = (sz.crop_top_margin - sz.top_margin, sz.crop_left_margin - sz.left_margin,
+                sz.crop_height, sz.crop_width)
         return RawFrame(
             mosaic=np.array(raw.raw_image_visible, dtype=np.uint16, copy=True),
             colors=np.array(raw.raw_colors_visible, dtype=np.uint8, copy=True),
@@ -59,6 +64,7 @@ def read_raw(path: str | Path) -> RawFrame:
             black_levels=tuple(float(b) for b in raw.black_level_per_channel),
             white_level=int(raw.white_level),
             source=path.name,
+            image_area=area,
         )
 
 

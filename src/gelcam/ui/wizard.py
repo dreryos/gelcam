@@ -1,19 +1,23 @@
 """Seven-step capture wizard: profile, scene, focus, test exposure, calibration, series, review.
 
-The processing pipeline does not exist yet, so the wizard only captures frames into a gel folder
-and writes a metadata.json that states "processing pending". It never writes a result image.
+The wizard captures frames into a gel folder and writes metadata.json. Step 7 can also run the
+processing pipeline on a background thread (result.tif + preview.png); without it the metadata
+states "processing pending".
 The camera is reached only through CameraController; controller signals are broadcast to every
 listener, so each one is filtered by the folder the wizard asked for.
 """
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
 from datetime import date
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import QTimer, QUrl, Qt
+import numpy as np
+
+from PySide6.QtCore import QTimer, QUrl, Qt, Signal
 from PySide6.QtGui import QDesktopServices, QFont
 from PySide6.QtWidgets import (
     QAbstractButton, QButtonGroup, QCheckBox, QComboBox, QDialog, QFrame, QGridLayout, QHBoxLayout,
@@ -26,6 +30,7 @@ from ..camera import FocusStep, Prop
 from ..camera.values import av_fnumber, av_label, iso_label, iso_value, tv_code_at_most, tv_label, tv_seconds
 from ..processing.exposure import ExposureMeasurement, propose_seconds
 from ..processing.focus import sharpness_rgb
+from ..processing.pipeline import process_gel_folder
 from ..storage.gel_folder import create_gel_folder, write_metadata
 from . import theme
 from .controller import CameraController
@@ -52,6 +57,9 @@ def pick_iso(allowed: list[int], target: int) -> int | None:
 
 
 class GelWizard(QDialog):
+    _proc_progress = Signal(str)  # emitted from the worker thread, delivered on the GUI thread
+    _proc_done = Signal(object)  # PipelineResult or an Exception
+
     def __init__(self, controller: CameraController, out_root: Path, light: str,
                  parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -84,6 +92,11 @@ class GelWizard(QDialog):
         self._test_dir: Path | None = None
         self._live_at_open = controller.live
         self._closed = False
+        self._processing = False
+        self.processed = False
+        self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="gelcam-process")
+        self._proc_progress.connect(self._on_proc_progress)
+        self._proc_done.connect(self._on_proc_done)
 
         self._timer = QTimer(self)  # drives live view while a preview is on screen
         self._timer.setInterval(60)
@@ -634,13 +647,26 @@ class GelWizard(QDialog):
         self.summary.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         card.body.addWidget(self.summary)
         row = QHBoxLayout()
+        self.btn_process = self._btn(self.tr("Process"), primary=True, slot=self._process)
+        row.addWidget(self.btn_process)
         row.addWidget(self._btn(self.tr("Open folder"), slot=self._open_folder))
         row.addStretch()
         card.body.addLayout(row)
+        self.proc_label = QLabel()
+        self.proc_label.setWordWrap(True)
+        card.body.addWidget(self.proc_label)
         lay.addWidget(card)
-        lay.addWidget(Note(self.tr("Processing (dark subtraction, flat field, stacking, result.tif) is not "
-                                   "implemented yet in this prototype — the frames and metadata are saved "
-                                   "for it.")))
+        self.pv_result = PreviewView()
+        self.pv_result.setMinimumHeight(260)
+        self.pv_result.hide()
+        lay.addWidget(self.pv_result, 1)
+        self.proc_stats = QLabel()
+        self.proc_stats.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        lay.addWidget(self.proc_stats)
+        lay.addWidget(Note(self.tr("Process subtracts the dark frames, stacks the light frames and saves "
+                                   "result.tif (linear, 16-bit) and preview.png in the gel folder. The RAW "
+                                   "frames are never modified; the flat field is skipped. Without Process, "
+                                   "Finish only saves the frames and metadata for later processing.")))
         lay.addStretch()
         return w
 
@@ -654,6 +680,63 @@ class GelWizard(QDialog):
             self.tr("Exposure: {0}").format(self._exposure_text()),
             self.tr("Flat field: skipped (no library in prototype)"),
         ]))
+
+    def _process(self) -> None:
+        assert self.folder is not None
+        try:
+            write_metadata(self.folder, self._metadata())
+        except OSError as exc:
+            return self._show_error(str(exc))
+        self.status.hide()
+        self._processing = True
+        self.btn_process.setEnabled(False)
+        self.proc_label.setText(self.tr("Processing…"))
+        self._update_nav()
+        folder = self.folder
+
+        def work() -> None:
+            try:
+                out: object = process_gel_folder(folder, lambda msg, f: self._emit(self._proc_progress, msg))
+            except Exception as exc:  # noqa: BLE001 - reported in the dialog
+                out = exc
+            self._emit(self._proc_done, out)
+
+        self._executor.submit(work)
+
+    @staticmethod
+    def _emit(sig: Any, value: object) -> None:
+        try:
+            sig.emit(value)
+        except RuntimeError:  # dialog already destroyed
+            pass
+
+    def _on_proc_progress(self, msg: str) -> None:
+        if not self._closed:
+            self.proc_label.setText(self.tr("Processing: {0}…").format(msg))
+
+    def _on_proc_done(self, out: Any) -> None:
+        if self._closed:
+            return
+        self._processing = False
+        if isinstance(out, BaseException):
+            self.proc_label.setText("")
+            self.btn_process.setEnabled(not isinstance(out, FileExistsError))
+            self._show_error(self.tr("Processing failed: {0}").format(out))
+        else:
+            from PIL import Image  # lazy
+
+            self.processed = True
+            self.proc_label.setText(self.tr("Processed: {0}, {1}").format(out.result.name, out.preview.name))
+            self.pv_result.set_frame(np.asarray(Image.open(out.preview).convert("RGB")))
+            self.pv_result.show()
+            s = out.stats
+            self.proc_stats.setText("\n".join([
+                self.tr("Background noise: {0:.2f} → {1:.2f} ADU (ratio {2:.2f})").format(
+                    s["background_noise_single"], s["background_noise_result"], s["background_noise_ratio"]),
+                self.tr("Saturated pixels: {0:.3f} %").format(100 * s["saturated_fraction"]),
+                self.tr("Frames used: {0} · max shift {1:.2f} px").format(s["frames_used"], s["shift_max_px"]),
+            ]))
+        self._update_nav()
 
     def _open_folder(self) -> None:
         if self.folder is not None:
@@ -716,7 +799,7 @@ class GelWizard(QDialog):
         self._update_nav()
 
     def _update_nav(self) -> None:
-        busy = self._batch is not None
+        busy = self._batch is not None or self._processing
         self.btn_back.setEnabled(self.idx > 0 and not busy)
         ok = not busy and not (self.idx == 5 and not (self.series_done and self.darks_done))
         self.btn_next.setEnabled(ok)
@@ -950,10 +1033,11 @@ class GelWizard(QDialog):
 
     def _finish(self) -> None:
         assert self.folder is not None
-        try:
-            write_metadata(self.folder, self._metadata())
-        except OSError as exc:
-            return self._show_error(str(exc))
+        if not self.processed:
+            try:
+                write_metadata(self.folder, self._metadata())
+            except OSError as exc:
+                return self._show_error(str(exc))
         self.accept()
 
     def _frames_taken(self) -> bool:
@@ -973,6 +1057,7 @@ class GelWizard(QDialog):
             self._closed = True
             self._timer.stop()
             self._reconnect_timer.stop()
+            self._executor.shutdown(wait=False, cancel_futures=True)
             for sig, slot in self._wiring:
                 try:
                     sig.disconnect(slot)
