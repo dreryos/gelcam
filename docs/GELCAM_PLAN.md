@@ -636,6 +636,56 @@ Total approximately 4–6 weeks of focused work; estimates are indicative.
 - **Saturation:** LibRaw reports `white_level` = **13,583** and **at ISO 100 it matches exactly** (see the time series below; hundreds of thousands of pixels exactly at 13,583). IMG_0001.CR2 was taken at ISO 800, where the real clipping is higher (**~15,304**); the saturation threshold therefore **depends on ISO**. The clipping mask therefore uses `white_level` from the header of the given frame, not a fixed number; pixels slightly above the threshold (hot pixels, noise) are also treated as saturated.
 - **Remaining from stage 2:** `calib` (master dark – median, master flat with `D_F`), `align` (phase correlation), `stack` (sigma clipping), `binning`, `export` (16-bit TIFF, preview, metadata), `pipeline` with a history of steps and tests: SNR gain ≈ √N, linearity, hot pixels after dark, vignetting after flat.
 
+### Pipeline steps implemented (10 Nov 2026)
+
+- `processing/calib.py`: `master_dark` (per-pixel median, tiled), `master_flat` (median of
+  flats − flat dark, normalised to mean 1; pixels below 0.05 left uncorrected and counted),
+  `calibrate` ((L − D) / F̂). `processing/binning.py`: `bin2x2` (mean of 2×2, keeps the scale).
+- `processing/framestack.py`: each RAW read once, channel written to a float32 `numpy.memmap`
+  (N, H, W) on disk plus the union of saturation masks. `processing/stack.py`:
+  `sigma_clip_mean` in row tiles. The scale is **robust** (1.4826 · MAD × 1.9 around the median,
+  0.5 ADU floor): with the plain standard deviation a single outlier masks itself at N = 8
+  (it inflates σ to ~A·√7/8), so a 10σ spike was never rejected. The 1.9 factor compensates
+  the low bias and noise of MAD at N = 8 (plain 1.4826 rejected 3–5 % of pure Gaussian samples;
+  with 1.9 below 1 %). On the UV scene (8 frames, R): noise ratio 0.37 vs 1/√8 = 0.354,
+  0.6 % of samples rejected, 3.7 s.
+- `processing/align.py`: phase correlation on a centred 512 × 512 crop with numpy FFT,
+  regularised normalisation (full whitening failed on noise), parabolic sub-pixel peak;
+  3.3 ms per pair, the same as `cv2.phaseCorrelate` — **OpenCV is not needed for alignment**.
+  Accuracy on synthetic gels < 0.1 px; a strong lane-brightness gradient across the crop can
+  bias it by 1–2 px. Static UV scene: shifts below 0.1 px. `shift_image` is bilinear (integer
+  shifts exact; sub-pixel shifts soften sharp bands by ~3 %, applied only above 0.5 px).
+
+- `processing/export.py`: `result.tif` 16-bit linear (ADU above the master dark, negatives
+  clipped to 0 and counted), `preview.png` 8-bit percentile stretch (display only); both refuse
+  to overwrite. `processing/pipeline.py`: `process()` = build stacks → master dark → optional
+  master flat → calibrate each frame into a memmap → align (only above 0.5 px) →
+  sigma-clipped mean → optional 2×2 binning → export; every step with its numbers goes to
+  `metadata.json` (`processing`, `stats`, status "processed"); the work memmaps are removed in
+  `finally`. CLI: `uv run python -m gelcam.processing <gel_folder> [--binning]`; the wizard's
+  step 7 has a "Process" button running the same on a background thread.
+- **Master dark and master flat use the sigma-clipped mean, not the median** — the median of
+  N frames has ~1.25× the noise of the mean, and the master dark noise is common to every
+  light frame, so it does not average down in the stack.
+- Real data, UV scene, 8 lights + 8 darks, R, cropped to 1728 × 2592: background noise
+  8.38 → 3.9 ADU, ratio **0.464** (1/√8 = 0.354). The gap is the master dark:
+  √(8.38²/8 + (7.3/√8)²) ≈ 3.9 ADU predicts 0.469. With 16 darks for 8 lights it would be ~0.41.
+  **Open decision:** take 2 × N darks by default (twice the dark time), or keep N.
+  0.66 % of pixels saturated (strongest highlighter line, recorded as a warning step); shifts
+  < 0.1 px, no resampling. CLI in its own process: 7.6 s, peak RSS **530 MB** (~110 MB is the
+  imports, most of the rest file-backed memmap pages the OS can evict; tile size 256 → 64 rows
+  changed nothing). Must still be measured on the 2 GB lab PC (`tools/bench.py`).
+
+**Flat field findings on the 4 Nov white-light flat (R channel), corrects ch. "Measured flat":**
+corners measured 60 px inside the edge are 0.51 / 0.59 (top) and 0.77 / 0.77 (bottom) of the
+centre — the illumination is asymmetric (top darker), not a symmetric 73–75 % vignetting.
+The leftmost ~40 channel columns are at ~6 % in the white-light flat but nearly full brightness
+in the UV scene, and the darks there are clean: it is the white-light geometry (paper edge or
+shadow), not the sensor. **Consequence: a white-light flat does not describe UV illumination;
+flats for gels must be taken under the UV level in use with a uniformly fluorescing target**
+(as screen C1 already says). Processing crops to the camera's official image area (LibRaw
+`crop_*`, 5184 × 3456) instead of the visible 5208 × 3476.
+
 ### Measured darks and bias (4 Nov 2026, 100D, ISO 100, f/8)
 
 Taken with `tools/capture_series.py` (only values from `allowed_values`; camera settings are restored afterwards), 16 frames in each set, in `testdata/calib/` (not committed). Conditions: lights off, cabinet closed, eyepiece covered. Statistics on raw mosaics.

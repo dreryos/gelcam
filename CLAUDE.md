@@ -12,7 +12,7 @@ The full plan, technical details and decision history: **`docs/GELCAM_PLAN.md`**
 
 ## Status
 
-- Phase: stages 0 and 1b (100D control via EDSDK) complete and verified on the camera; stage 2 (pipeline) in progress: `processing/raw_io.py`, `channel.py`. Next step `calib` (master dark/flat). Details and measured values in `docs/GELCAM_PLAN.md`; current checklist and next steps in **`STATUS.md`**.
+- Phase: stages 0 and 1b (100D control via EDSDK) complete and verified on the camera; stage 2 (pipeline) done on synthetic and real data (`python -m gelcam.processing`); UI prototype (live view + wizard) over MockCamera. Details and measured values in `docs/GELCAM_PLAN.md`; current checklist and next steps in **`STATUS.md`**.
 - Test RAW sets (light frames, dark frames, flat fields) are in `testdata/` (not committed).
 
 ## Stack
