@@ -11,6 +11,10 @@ import numpy as np
 _MAD_TO_SIGMA = np.float32(1.4826 * 1.9)
 _MIN_SCALE = np.float32(0.5)  # ADU floor so constant pixels do not reject everything
 
+#: Parameters recorded in metadata.json so every processing step is reproducible.
+CLIP_METHOD = {"method": "sigma-clipped mean", "centre": "median",
+               "scale": "1.4826 * 1.9 * MAD", "scale_floor_adu": float(_MIN_SCALE)}
+
 
 def _nanmedian(a: np.ndarray) -> np.ndarray:
     with warnings.catch_warnings():  # all-NaN columns (saturated in every frame) are expected and give NaN

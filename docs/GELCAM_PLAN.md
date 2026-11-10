@@ -456,7 +456,7 @@ R = mean_σ( (L_i − D) / F̂ ),    F̂ = (F − D_F) / mean(F − D_F)
 - **Saturation:** pixels ≥ `raw.white_level` (or close) are flagged already in the light frames, before subtraction, and those samples are excluded from the stack (NaN in the frame stack); a pixel saturated in every frame is written as 65535 and counted in `metadata.json`. A saturated band cannot be quantified.
 - **Channel selection:** `raw.raw_image_visible` + `raw.raw_colors_visible` (CFA colour indices). For R take R pixels, for G both G pixels (average 2×2 cell → half resolution). No interpolation.
 - **Sigma clipping:** e.g. 3σ along the frame axis, iteratively; removes flashes, cosmic rays and one-off shifts.
-- **Alignment:** `cv2.phaseCorrelate` on the channel; below 0.5 px no resampling.
+- **Alignment:** phase correlation with numpy FFT (`processing/align.py`, no OpenCV); below 0.5 px no resampling.
 - **Denoising:** median or non-local means, default off, always only as a separate file. **No AI denoising.**
 
 ### Correctness checks (tests)
@@ -634,12 +634,12 @@ Total approximately 4–6 weeks of focused work; estimates are indicative.
 - **Done:** `processing/raw_io.py` (`RawFrame`, `read_raw`: CR2 via rawpy without demosaicing, file is not modified) and `processing/channel.py` (`select_channel` R/G/B without interpolation, G = average of the two G pixels in a 2×2 cell, half-resolution output; `saturation_mask`). Tests: synthetic mosaic (exact pixels, different CFA phase, odd dimensions, unchanged input) and a real CR2 from the 100D. `rawpy`, `tifffile` and `opencv-python-headless` are now common dependencies.
 - **Notes on CR2 from the 100D (IMG_0001.CR2):** visible area **5208 × 3476** (not 5184 × 3456, which is only the `crop_*` subset), pattern `RGBG` with R at top-left (`raw_pattern` [[0,1],[3,2]]), black level 2048/2048/2048/2047, R/G channel after selection 2604 × 1738.
 - **Saturation:** LibRaw reports `white_level` = **13,583** and **at ISO 100 it matches exactly** (see the time series below; hundreds of thousands of pixels exactly at 13,583). IMG_0001.CR2 was taken at ISO 800, where the real clipping is higher (**~15,304**); the saturation threshold therefore **depends on ISO**. The clipping mask therefore uses `white_level` from the header of the given frame, not a fixed number; pixels slightly above the threshold (hot pixels, noise) are also treated as saturated.
-- **Remaining from stage 2:** `calib` (master dark – median, master flat with `D_F`), `align` (phase correlation), `stack` (sigma clipping), `binning`, `export` (16-bit TIFF, preview, metadata), `pipeline` with a history of steps and tests: SNR gain ≈ √N, linearity, hot pixels after dark, vignetting after flat.
+- **Remaining from stage 2:** done on 10 Nov 2026, see "Pipeline steps implemented" below.
 
 ### Pipeline steps implemented (10 Nov 2026)
 
-- `processing/calib.py`: `master_dark` (per-pixel median, tiled), `master_flat` (median of
-  flats − flat dark, normalised to mean 1; pixels below 0.05 left uncorrected and counted),
+- `processing/calib.py`: `master_dark` (sigma-clipped mean, tiled), `master_flat` (sigma-clipped
+  mean of flats − flat dark, normalised to mean 1; pixels below 0.05 left uncorrected and counted),
   `calibrate` ((L − D) / F̂). `processing/binning.py`: `bin2x2` (mean of 2×2, keeps the scale).
 - `processing/framestack.py`: each RAW read once, channel written to a float32 `numpy.memmap`
   (N, H, W) on disk plus the union of saturation masks. `processing/stack.py`:

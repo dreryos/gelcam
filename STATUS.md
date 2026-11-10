@@ -15,7 +15,7 @@ _Last updated: 10 Nov 2026._
 | 1b. EdsdkCamera | done except **auto power-off (sleep) test** |
 | 2. Pipeline | **done** (10 Nov) on synthetic and real data; CLI + wizard "Process"; lab PC memory check open |
 | 1a. GUI over simulation | **prototype done** (10 Nov): live view window LV1–LV4 over MockCamera, `ui/main_window.py` |
-| 3. Wizard | **prototype done** (10 Nov): `ui/wizard.py`, captures lights + darks + metadata; no processing yet |
+| 3. Wizard | **prototype done** (10 Nov): `ui/wizard.py`, captures lights + darks + metadata; step 7 "Process" runs the pipeline |
 | 4. Profiles and export | designed (W5 flat library, C1, C2, P1, W7, S1, L1), no code |
 | 5. Pilot | not started; performance measured on dev machine (ch. 8), lab PC not yet |
 
@@ -34,8 +34,8 @@ Built over MockCamera, verified offscreen only (not yet on Windows with the 100D
 - Live view: no navigator thumbnail, no "AF point: click in the image", no sharpness sparkline
   or auto fine-focus, no "Detected applications" panel in LV3 (blockers are EDSDK-side).
 - Wizard: no flat library (flat recorded as skipped), no SNR/drift stats, thumbnails are
-  numbered squares; it never writes `result.tif` — status in metadata is
-  "captured; processing pending" until the pipeline exists.
+  numbered squares; `result.tif` is written only by step 7 "Process" (otherwise metadata
+  status stays "captured; processing pending").
 - Mock quirk: at 10× the mock's live view is a blocky upscale, so sharpness is noise-dominated
   and the AF-failed note can show with the mock.
 - No `.ts`/`.qm` translations generated yet (strings are all in `tr()`).
@@ -72,8 +72,9 @@ Built over MockCamera, verified offscreen only (not yet on Windows with the 100D
 - [x] Steps 1–7; exposure proposal (target 75 % of range, capped at 30 s).
 - [x] Darks right after the series (same time and ISO).
 - [x] Error states: series interrupted (W6), saturation (W4), AF failed (W3).
-- [ ] Connect to the pipeline once stage 2 exists: stacking, dark/flat, `result.tif`,
-      preview and processing steps in `metadata.json` (now status "captured; processing pending").
+- [x] Connected to the pipeline: step 7 "Process" (cancellable) writes `result.tif`,
+      `preview.png` and the processing steps to `metadata.json`.
+- [ ] Flat from a library (needs the flat library, stage 4).
 - [ ] SNR and drift stats in step 6, real thumbnails.
 
 ### 4. Profiles, flat library, settings, export (stage 4)
