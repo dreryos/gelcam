@@ -19,7 +19,7 @@ from pathlib import Path
 import numpy as np
 
 from .. import values
-from ..base import CameraError, CameraInfo, FocusStep, Prop, check_allowed, ensure_raw_quality
+from ..base import CameraError, CameraInfo, FocusStep, LensInfo, Prop, check_allowed, ensure_raw_quality
 from .blockers import find_blockers
 from . import constants as C
 from .binding import EdsCapacity, EdsDeviceInfo, EdsPoint, EdsPropertyDesc, Edsdk, check
@@ -242,6 +242,32 @@ class EdsdkCamera:
         self._retry_busy(lambda: self._set_u32(_PROP_IDS[prop], value))
         if prop in (Prop.ISO, Prop.TV, Prop.AV):
             self._remembered[prop] = value
+
+    def lens_info(self) -> LensInfo:
+        return self._call(self._lens_info)
+
+    def _lens_info(self) -> LensInfo:
+        """Each field is read on its own; anything the camera does not report stays None."""
+        name = attached = focal = None
+        try:
+            name = self._get_str(C.kEdsPropID_LensName).strip() or None
+        except Exception:  # noqa: BLE001 - not reported
+            pass
+        try:
+            attached = bool(self._get_u32(C.kEdsPropID_LensStatus))
+        except Exception:  # noqa: BLE001
+            pass
+        try:
+            dtype, size = c_uint32(), c_uint32()
+            check(self._sdk.EdsGetPropertySize(self._cam, C.kEdsPropID_FocalLength, 0, byref(dtype), byref(size)),
+                  "Focal length")
+            buf = (ctypes.c_ubyte * max(size.value, 1))()
+            check(self._sdk.EdsGetPropertyData(self._cam, C.kEdsPropID_FocalLength, 0, size.value, buf),
+                  "Focal length")
+            focal = C.decode_focal_length(dtype.value, bytes(buf)[: size.value])
+        except Exception:  # noqa: BLE001
+            pass
+        return LensInfo(name, attached, focal)
 
     # ------------------------------------------------------------------ live view
     def start_live_view(self) -> None:

@@ -50,6 +50,15 @@ class CameraInfo:
     sdk_version: str = ""
 
 
+@dataclass(frozen=True)
+class LensInfo:
+    """Lens on the camera; a field is None when the camera does not report it."""
+
+    name: str | None = None
+    attached: bool | None = None
+    focal_mm: float | None = None
+
+
 class CameraError(RuntimeError):
     """Camera communication error, with a message the operator can understand."""
 
@@ -107,6 +116,10 @@ class Camera(Protocol):
 
     def capture(self, dest_dir: Path) -> Path:
         """Takes a picture without AF, downloads the file to `dest_dir` and returns its path."""
+        ...
+
+    def lens_info(self) -> LensInfo:
+        """Lens name, attached state and focal length; every field is None when the camera does not report it."""
         ...
 
 

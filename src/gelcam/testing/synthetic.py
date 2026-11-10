@@ -9,6 +9,9 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+SIM_BLACK = 2048
+SIM_WHITE = 15000
+
 
 @dataclass
 class SyntheticGel:
@@ -51,8 +54,8 @@ def expose(
     *,
     photons: float = 2000.0,
     read_noise: float = 4.0,
-    black_level: int = 2048,
-    white_level: int = 15000,
+    black_level: int = SIM_BLACK,
+    white_level: int = SIM_WHITE,
     dark_current: float = 5.0,
     hot_pixels: np.ndarray | None = None,
 ) -> np.ndarray:

@@ -15,7 +15,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .base import CameraError, CameraInfo, FocusStep, Prop, check_allowed, ensure_raw_quality
+from .base import CameraError, CameraInfo, FocusStep, LensInfo, Prop, check_allowed, ensure_raw_quality
 from ..testing.synthetic import SyntheticGel, expose, to_preview_rgb
 
 # Values offered by the 100D in M mode (EDSDK codes)
@@ -32,7 +32,10 @@ _QUALITY_CODES = [0x13FF0F, 0x12FF0F, 0x640013, 0x64FF0F]  # as on the 100D: JPE
 
 
 class MockCamera:
-    def __init__(self, source_dir: Path | None = None, *, seed: int = 0, latency: float = 0.0) -> None:
+    def __init__(self, source_dir: Path | None = None, *, seed: int = 0, latency: float = 0.0,
+                 available: bool = True) -> None:
+        self.available = available
+        self._outage_until = 0.0
         self._source = sorted(source_dir.glob("*.CR2")) + sorted(source_dir.glob("*.cr2")) if source_dir else []
         self._cycle = itertools.cycle(self._source) if self._source else None
         self._rng = np.random.default_rng(seed)
@@ -51,12 +54,30 @@ class MockCamera:
 
     # --- connection ---
     def connect(self) -> CameraInfo:
+        if not self.available or time.monotonic() < self._outage_until:
+            raise CameraError("No camera found. Check the USB cable and that the camera is switched on.")
         self._connected = True
         return CameraInfo(model=str(self._values[Prop.PRODUCT_NAME]), port="mock")
 
     def disconnect(self) -> None:
         self._live = False
         self._connected = False
+
+    def simulate_disconnect(self, seconds: float) -> None:
+        """Drops the connection; connect() fails until `seconds` have passed."""
+        self._live = False
+        self._connected = False
+        self._outage_until = time.monotonic() + seconds
+
+    def reconnect(self, attempts: int = 1, delay: float = 0.0) -> CameraInfo:
+        for i in range(attempts):
+            try:
+                return self.connect()
+            except CameraError:
+                if i == attempts - 1:
+                    raise
+                time.sleep(delay)
+        raise CameraError("No reconnect attempts made.")
 
     @property
     def is_connected(self) -> bool:
@@ -96,6 +117,7 @@ class MockCamera:
         self._zoom = (factor, w // 2 if x is None else x, h // 2 if y is None else y)
 
     def live_view_frame(self) -> np.ndarray | None:
+        self._require()
         if not self._live:
             return None
         img = self._blurred(self._signal, self._defocus)
@@ -108,6 +130,10 @@ class MockCamera:
             crop = img[y0:y0 + ch, x0:x0 + cw]
             img = np.kron(crop, np.ones((factor, factor)))[:h, :w]
         return to_preview_rgb(img, self._rng)
+
+    def lens_info(self) -> LensInfo:
+        self._require()
+        return LensInfo("EF-S 18-55mm f/3.5-5.6 IS STM (simulation)", True, 35.0)
 
     def autofocus(self) -> None:
         self._require()

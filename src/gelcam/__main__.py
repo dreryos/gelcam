@@ -17,6 +17,7 @@ def main(argv: list[str] | None = None) -> int:
     from PySide6.QtWidgets import QApplication
 
     from .ui.controller import CameraController
+    from .ui import theme
     from .ui.main_window import MainWindow
 
     if args.mock is not None:
@@ -30,6 +31,7 @@ def main(argv: list[str] | None = None) -> int:
         factory = lambda: EdsdkCamera(args.vendor)  # noqa: E731
 
     app = QApplication(sys.argv[:1])
+    theme.apply(app)
     win = MainWindow(CameraController(factory))
     win.show()
     return app.exec()

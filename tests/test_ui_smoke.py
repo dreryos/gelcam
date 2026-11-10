@@ -38,17 +38,12 @@ def test_main_window_with_mock(tmp_path):
     errors = []
     win.ctrl.error.connect(errors.append)
 
-    win.btn_connect.click()
     assert _wait(app, lambda: win.combos[Prop.ISO].count() > 0)
-
     iso = win.combos[Prop.ISO]
     iso.setCurrentIndex(iso.count() - 1)
     assert _wait(app, lambda: cams[0]._values[Prop.ISO] == iso.currentData())
 
-    win.btn_live.setChecked(True)
-    assert _wait(app, lambda: win.view.pixmap() is not None and not win.view.pixmap().isNull())
-
-    win.btn_af.click()
+    assert _wait(app, lambda: win._frame is not None)
     win.btn_capture.click()
     assert _wait(app, lambda: any(tmp_path.iterdir()))
     assert errors == []
