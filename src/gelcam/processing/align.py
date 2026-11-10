@@ -13,8 +13,11 @@ def _crop(a: np.ndarray, size: int) -> np.ndarray:
 
 def _prepare(a: np.ndarray, size: int) -> np.ndarray:
     c = _crop(np.asarray(a, dtype=np.float32), size)
+    bad = np.isnan(c)
+    if bad.any():  # NaN (saturated samples) must not poison the FFT: use the median of the valid pixels
+        c = np.where(bad, np.float32(np.median(c[~bad]) if not bad.all() else 0.0), c)
     c = c - c.mean()
-    return c * np.outer(np.hanning(c.shape[0]), np.hanning(c.shape[1])).astype(np.float32)
+    return c * np.outer(np.hanning(c.shape[0]).astype(np.float32), np.hanning(c.shape[1]).astype(np.float32))
 
 
 def _refine(m: np.ndarray, i: int, j: int) -> tuple[float, float]:
@@ -46,19 +49,31 @@ def estimate_shift(ref: np.ndarray, img: np.ndarray, max_size: int = 512) -> tup
 
 
 def _axis_weights(n: int, d: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    src = np.arange(n, dtype=np.float64) - d
+    src = np.arange(n, dtype=np.float64) - d  # 1-D per-axis vector: float64 keeps the sub-pixel position exact
     lo = np.floor(src)
     t = (src - lo).astype(np.float32)
     return np.clip(lo, 0, n - 1).astype(np.intp), np.clip(lo + 1, 0, n - 1).astype(np.intp), t
 
 
 def shift_image(img: np.ndarray, dy: float, dx: float) -> np.ndarray:
-    """Move image content by (dy, dx) with bilinear resampling; edges are replicated."""
+    """Move image content by (dy, dx) with bilinear resampling; edges are replicated.
+
+    NaN samples (saturated) stay NaN: where any contributing neighbour is NaN the result is NaN.
+    """
     a = np.asarray(img, dtype=np.float32)
     y0, y1, ty = _axis_weights(a.shape[0], dy)
     x0, x1, tx = _axis_weights(a.shape[1], dx)
-    rows = a[y0] * (1 - ty)[:, None] + a[y1] * ty[:, None]
-    return (rows[:, x0] * (1 - tx) + rows[:, x1] * tx).astype(np.float32)
+
+    def resample(b: np.ndarray) -> np.ndarray:
+        rows = b[y0] * (1 - ty)[:, None] + b[y1] * ty[:, None]
+        return (rows[:, x0] * (1 - tx) + rows[:, x1] * tx).astype(np.float32)
+
+    bad = np.isnan(a)
+    if not bad.any():
+        return resample(a)
+    out = resample(np.where(bad, np.float32(np.median(a[~bad]) if not bad.all() else 0.0), a))
+    out[resample((~bad).astype(np.float32)) < 0.999] = np.nan  # validity mask resampled alongside the data
+    return out
 
 
 def needs_alignment(dy: float, dx: float, threshold: float = 0.5) -> bool:

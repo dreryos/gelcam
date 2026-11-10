@@ -88,3 +88,15 @@ def test_real_scene_frames_static():
         s = estimate_shift(fr[0], fr[k])
         print("real shift", k, s)
         assert not needs_alignment(*s)
+
+
+def test_nan_tolerated_in_estimate_and_shift():
+    ref = noisy(SIG, 1)
+    img = noisy(np.roll(SIG, (3, -4), axis=(0, 1)), 2)
+    img[100:110, 200:230] = np.nan
+    dy, dx = estimate_shift(ref, img)
+    assert (dy, dx) == pytest.approx((-3, 4), abs=0.2)
+    out = shift_image(img, dy, dx)
+    assert out.dtype == np.float32 and np.isnan(out).any() and np.isnan(out).sum() < 3 * 10 * 30
+    assert np.isfinite(out[:90]).all()
+    assert not np.isnan(shift_image(ref, 0.4, -1.3)).any()

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+import tempfile
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
@@ -32,5 +34,15 @@ def write_metadata(folder: Path, data: dict) -> Path:
 
     doc = {**data, "app_version": __version__, "written": datetime.now().astimezone().isoformat()}
     path = folder / "metadata.json"
-    path.write_text(json.dumps(doc, indent=2, ensure_ascii=False, default=default), encoding="utf-8")
+    text = json.dumps(doc, indent=2, ensure_ascii=False, default=default)
+    fd, tmp = tempfile.mkstemp(prefix=".metadata-", suffix=".tmp", dir=folder)  # atomic: never writes through a symlink
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(text)
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.replace(tmp, path)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise
     return path

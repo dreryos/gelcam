@@ -11,7 +11,8 @@ def test_result_tiff_clips_rounds_and_reports(tmp_path):
     out = tifffile.imread(tmp_path / "result.tif")
     assert out.dtype == np.uint16 and out.tolist() == [[0, 0], [2, 65535]]
     assert info == {"file": "result.tif", "dtype": "uint16", "units": "ADU above master dark",
-                    "shape": [2, 2], "clipped_low": 1, "clipped_high": 1}
+                    "shape": [2, 2], "clipped_low": 1, "clipped_high": 1,
+                    "saturated_in_all_frames": 0}
 
 
 def test_never_overwrites(tmp_path):
