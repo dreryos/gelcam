@@ -97,6 +97,7 @@ class GelWizard(QDialog):
         self._processing = False
         self._future: Future[None] | None = None
         self._cancel = threading.Event()
+        self._metadata_written = False
         self._frozen: tuple[DyeProfile, int] | None = None  # (profile, UV level) at the first frame
         self.processed = False
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="gelcam-process")
@@ -709,6 +710,7 @@ class GelWizard(QDialog):
             write_metadata(self.folder, self._metadata())
         except OSError as exc:
             return self._show_error(str(exc))
+        self._metadata_written = True
         self.status.hide()
         self._processing = True
         self.btn_process.setEnabled(False)
@@ -753,7 +755,10 @@ class GelWizard(QDialog):
             from PIL import Image  # lazy
 
             self.processed = True
-            self.proc_label.setText(self.tr("Processed: {0}, {1}").format(out.result.name, out.preview.name))
+            text = self.tr("Processed: {0}, {1}").format(out.result.name, out.preview.name)
+            if self._cancel.is_set():  # cancelled too late: the run had reached publishing and completed
+                text = self.tr("Processing had already finished; the results were kept.") + " " + text
+            self.proc_label.setText(text)
             self.pv_result.set_frame(np.asarray(Image.open(out.preview).convert("RGB")))
             self.pv_result.show()
             s = out.stats
@@ -1073,9 +1078,12 @@ class GelWizard(QDialog):
 
     def reject(self) -> None:
         if self._frames_taken() and not self._closed:
-            ask = QMessageBox.question(
-                self, self.tr("Cancel"),
-                self.tr("Frames already taken stay in the gel folder, without metadata. Cancel anyway?"))
+            if self._metadata_written:
+                msg = self.tr("Frames and metadata.json stay in the gel folder (status: captured; processing "
+                              "pending). Running processing will be stopped. Cancel anyway?")
+            else:
+                msg = self.tr("Frames already taken stay in the gel folder, without metadata. Cancel anyway?")
+            ask = QMessageBox.question(self, self.tr("Cancel"), msg)
             if ask != QMessageBox.StandardButton.Yes:
                 return
         super().reject()

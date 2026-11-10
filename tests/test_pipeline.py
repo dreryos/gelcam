@@ -354,3 +354,35 @@ def test_cancel_after_first_progress(tmp_path):
     assert not (tmp_path / "result.tif").exists() and not (tmp_path / "preview.png").exists()
     assert _leftovers(tmp_path) == []
     assert json.loads((tmp_path / "metadata.json").read_text()) == meta
+
+
+def test_cancel_right_before_publish(tmp_path, monkeypatch):
+    meta = _gel(tmp_path)
+    cancel = threading.Event()
+    real = pipeline.write_preview_png
+    monkeypatch.setattr(pipeline, "write_preview_png", lambda *a, **k: (cancel.set(), real(*a, **k))[1])
+    with pytest.raises(ProcessingCancelled):
+        process_gel_folder(tmp_path, cancel=cancel)
+    assert not (tmp_path / "result.tif").exists() and not (tmp_path / "preview.png").exists()
+    assert _leftovers(tmp_path) == []
+    assert json.loads((tmp_path / "metadata.json").read_text()) == meta
+
+
+def test_cancel_during_publish_completes(tmp_path, monkeypatch):
+    _gel(tmp_path)
+    cancel = threading.Event()
+    real = pipeline._publish
+    monkeypatch.setattr(pipeline, "_publish", lambda s, d: (real(s, d), cancel.set())[0])
+    process_gel_folder(tmp_path, cancel=cancel)
+    assert (tmp_path / "result.tif").exists() and (tmp_path / "preview.png").exists()
+    assert json.loads((tmp_path / "metadata.json").read_text())["status"] == "processed"
+
+
+def test_metadata_steps_use_shared_clip_constants(tmp_path):
+    from gelcam.processing import stack
+    _gel(tmp_path)
+    process_gel_folder(tmp_path)
+    steps = json.loads((tmp_path / "metadata.json").read_text())["processing"]
+    for step in (s for s in steps if s["step"] in ("master_dark", "stack")):
+        assert {k: step[k] for k in stack.CLIP_METHOD} == stack.CLIP_METHOD
+    assert (stack.SIGMA, stack.ITERATIONS) == (3.0, 3)

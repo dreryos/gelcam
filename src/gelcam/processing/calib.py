@@ -6,7 +6,7 @@ from collections.abc import Callable
 
 import numpy as np
 
-from .stack import sigma_clip_mean
+from .stack import ITERATIONS, SIGMA, sigma_clip_mean
 
 F32 = np.float32
 
@@ -16,7 +16,7 @@ def master_dark(darks, tile_rows: int = 256, check: Callable[[], None] | None = 
 
     Robust to cosmic rays and transients like a median, but with ~20 % less noise (mean, not median).
     """
-    return sigma_clip_mean(darks, tile_rows=tile_rows, check=check)[0]
+    return sigma_clip_mean(darks, SIGMA, ITERATIONS, tile_rows, check)[0]
 
 
 def master_flat(
@@ -28,7 +28,7 @@ def master_flat(
     Pixels where F̂ < `min_value` (dead, unlit or saturated) are set to 1.0, i.e. left uncorrected.
     Returns (F̂ float32, number of such pixels).
     """
-    f = sigma_clip_mean(flats, tile_rows=tile_rows, check=check)[0]
+    f = sigma_clip_mean(flats, SIGMA, ITERATIONS, tile_rows, check)[0]
     f -= np.asarray(flat_dark, dtype=F32)
     pos = f > 0
     if not pos.any():
