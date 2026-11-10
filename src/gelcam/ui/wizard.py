@@ -1093,22 +1093,23 @@ class GelWizard(QDialog):
     def _cancel_processing(self) -> None:
         """Stops a running pipeline and waits until it has finished, so nothing is written after the dialog closed."""
         fut = self._future
-        if fut is None or fut.done():
+        if fut is None:
             return
-        self._cancel.set()
-        self.proc_label.setText(self.tr("Cancelling…"))
-        for b in (self.btn_next, self.btn_back, self.btn_cancel, self.btn_process):
-            b.setEnabled(False)
-        while True:
-            try:
-                fut.result(timeout=0.05)
-                break
-            except FutureTimeout:
-                QApplication.processEvents(QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
-            except BaseException:  # noqa: BLE001 - the worker reports its own errors
-                return
+        if not fut.done():
+            self._cancel.set()
+            self.proc_label.setText(self.tr("Cancelling…"))
+            for b in (self.btn_next, self.btn_back, self.btn_cancel, self.btn_process):
+                b.setEnabled(False)
+            while True:
+                try:
+                    fut.result(timeout=0.05)
+                    break
+                except FutureTimeout:
+                    QApplication.processEvents(QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
+                except BaseException:  # noqa: BLE001 - the worker reports its own errors
+                    return
         out = self._proc_out
-        if out is not None and not isinstance(out, BaseException):  # passed the publishing boundary: completed
+        if not self.processed and out is not None and not isinstance(out, BaseException):  # passed the publishing boundary: completed
             self.processed = True
             QMessageBox.information(self, self.tr("Cancel"),
                                     self.tr("Processing had already finished; the results were kept."))

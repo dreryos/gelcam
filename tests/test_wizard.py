@@ -275,6 +275,24 @@ def test_late_cancel_shows_results_kept(env, monkeypatch):
     assert (folder / "result.tif").exists() and (folder / "preview.png").exists()
 
 
+def test_close_after_worker_done_before_signal_shows_notice_once(env, monkeypatch):
+    app, _ctrl, _cam, wiz, _sent, _root = env
+    calls = _record_boxes(monkeypatch)
+    _to_process_step(app, wiz)
+    folder = wiz.folder
+    wiz.btn_process.click()
+    t0 = time.time()
+    while not wiz._future.done() and time.time() - t0 < 60:  # no Qt events: completion signal stays queued
+        time.sleep(0.01)
+    assert wiz._future.done() and not wiz.processed
+    wiz.reject()
+    app.processEvents()  # the queued completion arrives after close and must be ignored
+    assert wiz.result() == wiz.DialogCode.Rejected
+    kept = [c for c in calls if c[0] == "information" and "results were kept" in c[1]]
+    assert len(kept) == 1
+    assert (folder / "result.tif").exists() and (folder / "preview.png").exists()
+
+
 def test_profile_and_uv_frozen_after_first_frame(env):
     app, _ctrl, _cam, wiz, _sent, _root = env
     assert wiz.dye.isEnabled() and wiz.uv100.isEnabled()
