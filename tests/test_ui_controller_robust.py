@@ -79,3 +79,24 @@ def test_measure_file(app, tmp_path):
     assert _wait(app, lambda: got)
     assert got[0][0] == path and got[0][1].fraction > 0
     ctrl.shutdown()
+
+
+def test_reconnect_after_cancel_is_noop(app):
+    cams = []
+    ctrl = CameraController(lambda: cams.append(MockCamera(seed=1)) or cams[-1])
+    lost, back, errors = [], [], []
+    ctrl.connection_lost.connect(lambda: lost.append(1))
+    ctrl.reconnected.connect(back.append)
+    ctrl.error.connect(errors.append)
+    ctrl.connect_camera()
+    assert _wait(app, lambda: ctrl._camera is not None)
+    cams[0].simulate_disconnect(5)
+    ctrl.capture(__import__("pathlib").Path("."))
+    assert _wait(app, lambda: lost)
+    errors.clear()
+    ctrl.disconnect_camera()
+    ctrl.reconnect()
+    time.sleep(0.3)
+    _wait(app, lambda: False, 0.3)
+    assert not errors and not back and ctrl._camera is None
+    ctrl.shutdown()

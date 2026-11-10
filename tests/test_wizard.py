@@ -157,3 +157,47 @@ def test_series_interrupted_and_resumed(env, monkeypatch):
     resume.click()
     assert _wait(app, lambda: wiz.series_done)
     assert len(wiz.light_frames) == 4
+
+
+def test_late_capture_while_paused_is_kept(env):
+    app, ctrl, cam, wiz, _sent, _root = env
+    wiz.btn_next.click()
+    dest = wiz.folder / "raw"
+    dest.mkdir(exist_ok=True)
+    wiz._batch = {"kind": "light", "dest": dest, "total": 3, "got": [], "paused": False, "resume": False}
+    wiz._interrupt(lost=False)
+    calls = []
+    ctrl.capture = lambda d: calls.append(d)
+    wiz._on_captured(dest / "a.CR2")  # in flight when the series was interrupted
+    assert wiz._batch["got"] == [dest / "a.CR2"] and not calls
+    resume = next(b for b in wiz._box.buttons() if b.text().startswith("Resume"))
+    assert resume.text().endswith("2")
+    resume.click()
+    assert len(calls) == 1 and len(wiz._batch["got"]) == 1  # resume needs only the remaining frames
+    wiz._batch["paused"] = True
+    wiz._batch["total"] = 2
+    wiz._on_captured(dest / "b.CR2")
+    wiz._continue_batch()  # already complete: finishes instead of capturing
+    assert wiz._batch is None and wiz.light_frames == [dest / "a.CR2", dest / "b.CR2"]
+
+
+def test_done_restores_live_after_queued_stop(env):
+    app, ctrl, cam, wiz, _sent, _root = env
+    assert wiz._live_at_open
+    ctrl.set_live_view(False)  # stop still queued
+    wiz.done(0)
+    assert _wait(app, lambda: ctrl.live and not ctrl._pool._work_queue.qsize())
+    frames = []
+    ctrl.frame_ready.connect(frames.append)
+    assert _wait(app, lambda: (ctrl.request_frame(), bool(frames))[1])
+
+
+def test_redundant_live_view_is_noop(env, monkeypatch):
+    app, ctrl, cam, _wiz, _sent, _root = env
+    n = []
+    orig = cam.start_live_view
+    monkeypatch.setattr(cam, "start_live_view", lambda: (n.append(1), orig())[1])
+    ctrl.set_live_view(True)
+    assert _wait(app, lambda: not ctrl._pool._work_queue.qsize())
+    time.sleep(0.1)
+    assert not n

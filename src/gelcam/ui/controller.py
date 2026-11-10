@@ -102,6 +102,8 @@ class CameraController(QObject):
         """One reconnect attempt; failure is silent (the window counts attempts)."""
 
         def do() -> CameraInfo | None:
+            if not self.lost or self._camera is None:  # cancelled or already reconnected
+                return None
             try:
                 return self._cam().reconnect(attempts=1, delay=0.0)  # type: ignore[attr-defined]
             except CameraError:
@@ -167,6 +169,8 @@ class CameraController(QObject):
 
     def set_live_view(self, on: bool) -> None:
         def do() -> None:
+            if on == self.live:  # redundant request: true no-op
+                return
             cam = self._cam()
             cam.start_live_view() if on else cam.stop_live_view()
             self.live = on

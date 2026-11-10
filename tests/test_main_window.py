@@ -179,3 +179,13 @@ def test_disconnect_after_loss_rearms_detection(app, tmp_path):
     cams[-1].simulate_disconnect(30)
     assert _wait(app, lambda: win.lost_card.isVisibleTo(win))
     win.close()
+
+
+def test_wizard_is_window_modal(app, tmp_path):
+    from PySide6.QtCore import Qt
+
+    win, _cams = _window(tmp_path)
+    win._open_wizard()
+    assert win._wizard.windowModality() == Qt.WindowModality.WindowModal and win._wizard.isModal()
+    win._wizard.close()
+    win.ctrl.shutdown()

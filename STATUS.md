@@ -62,30 +62,35 @@ Pure functions, numpy in/out, `float32` only, one test per step (plan ch. 6, rul
 **Done when:** synthetic test confirms SNR gain ≈ √N and linearity; real scene processes
 within the memory limit (`tools/bench.py`).
 
-### 2. GUI – live view window per mockups LV1–LV4 (stage 1a)
+### 2. GUI – live view window per mockups LV1–LV4 (stage 1a) — prototype done
 
-- [ ] Layout per plan ch. 5 "Live View window": top bar with camera chips, view toolbar
-      (grid, invert, clipping, zoom 1×/5×/10× via camera, navigator), histogram with channel
-      selector, right column cards (Camera, Exposure, Single frame / Focus).
-- [ ] Display adjustment affects preview only; "estimate (live view)" vs "measured on RAW"
-      visibly distinguished.
-- [ ] Histogram and sharpness every 2nd–4th frame on half resolution; lazy `cv2` import.
-- [ ] **All user-facing strings through `tr()`** + `.ts`/`.qm` with Czech translation – the
-      current window still has hard-coded strings.
-- [ ] Error states LV3 (no camera, blocking apps) and LV4 (connection lost → reconnect);
-      extend `MockCamera` to simulate them.
+- [x] Layout per plan ch. 5 "Live View window" (top bar chips, view toolbar, histogram with
+      channel selector, Camera / Exposure / Single frame / Focus cards).
+- [x] Display adjustment affects preview only; live view estimate vs "measured on RAW".
+- [x] Histogram and sharpness every 3rd frame on half resolution.
+- [x] All user-facing strings through `tr()`.
+- [x] Error states LV3 (no camera, auto retry) and LV4 (connection lost → reconnect);
+      MockCamera simulates both.
+- [ ] `.ts`/`.qm` files with the Czech translation.
+- [ ] Left out of the prototype (see "Prototype" above): navigator, AF point by click,
+      sharpness sparkline, auto fine-focus, detected blocking applications in LV3.
+- [ ] Lazy `cv2` / `tifffile` import once alignment and export exist.
 
-### 3. Wizard (stage 3) – mockups W1–W7
+### 3. Wizard (stage 3) – mockups W1–W7 — prototype done
 
-- [ ] Steps 1–7 per plan ch. 5 "Wizard"; exposure proposal (brightest region at 70–80 % of
-      range, prefer more frames over > 30 s).
-- [ ] Automatic darks right after the series (same time, ISO, sensor state).
-- [ ] Error states: series interrupted (W6), saturation (W4), AF failed (W3).
+- [x] Steps 1–7; exposure proposal (target 75 % of range, capped at 30 s).
+- [x] Darks right after the series (same time and ISO).
+- [x] Error states: series interrupted (W6), saturation (W4), AF failed (W3).
+- [ ] Connect to the pipeline once stage 2 exists: stacking, dark/flat, `result.tif`,
+      preview and processing steps in `metadata.json` (now status "captured; processing pending").
+- [ ] SNR and drift stats in step 6, real thumbnails.
 
 ### 4. Profiles, flat library, settings, export (stage 4)
 
-- [ ] Dye profiles (plan ch. 5), flat library with age warning (W5), Settings S1 in
-      `%APPDATA%\GelCam`, gel folder structure (plan ch. 7), export screen W7.
+- [x] Default dye profiles (`acquisition/profiles.py`) and gel folder structure
+      (`storage/gel_folder.py`).
+- [ ] Profiles as TOML + editor P1, flat library with age warning (W5) and capture C1,
+      Settings S1 in `%APPDATA%\GelCam`, log window L1 as designed.
 
 ### 5. Pilot (stage 5) – Windows only
 
