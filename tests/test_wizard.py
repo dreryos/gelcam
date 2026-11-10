@@ -311,3 +311,29 @@ def test_profile_and_uv_frozen_after_first_frame(env):
     meta = wiz._metadata()
     assert meta["profile"]["name"] == chosen.name and meta["uv_level"] == 100
     assert wiz.profile is chosen
+
+
+def test_completion_delivered_during_cancel_wait_shows_notice_once(env, monkeypatch):
+    from gelcam.ui import wizard
+    app, _ctrl, _cam, wiz, _sent, _root = env
+    calls = _record_boxes(monkeypatch)
+    real = wizard.process_gel_folder
+
+    def late(folder, progress=None, cancel=None):
+        while not cancel.is_set():
+            time.sleep(0.01)
+        return real(folder, progress)
+    monkeypatch.setattr(wizard, "process_gel_folder", late)
+    real_pe = wizard.QApplication.processEvents
+
+    def pe(*a):  # deliver the completion signal inside the wait loop
+        wiz._future.result(timeout=60)
+        real_pe(*a)
+    _to_process_step(app, wiz)
+    wiz.btn_process.click()
+    monkeypatch.setattr(wizard.QApplication, "processEvents", pe)
+    wiz.reject()
+    assert wiz.result() == wiz.DialogCode.Rejected
+    assert wiz.processed
+    kept = [c for c in calls if c[0] == "information" and "results were kept" in c[1]]
+    assert len(kept) == 1

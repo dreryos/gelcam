@@ -1095,6 +1095,7 @@ class GelWizard(QDialog):
         fut = self._future
         if fut is None:
             return
+        handled_before = self.processed  # _on_proc_done may run inside the wait loop below
         if not fut.done():
             self._cancel.set()
             self.proc_label.setText(self.tr("Cancelling…"))
@@ -1109,7 +1110,7 @@ class GelWizard(QDialog):
                 except BaseException:  # noqa: BLE001 - the worker reports its own errors
                     return
         out = self._proc_out
-        if not self.processed and out is not None and not isinstance(out, BaseException):  # passed the publishing boundary: completed
+        if not handled_before and out is not None and not isinstance(out, BaseException):  # passed the publishing boundary: completed
             self.processed = True
             QMessageBox.information(self, self.tr("Cancel"),
                                     self.tr("Processing had already finished; the results were kept."))
