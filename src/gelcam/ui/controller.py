@@ -236,11 +236,13 @@ class CameraController(QObject):
             return self.tr("Focused: sharpness {0}.").format(numbers)
         if ratio >= 0.90:
             return self.tr(
-                "Autofocus finished, sharpness unchanged ({0}). If the image is blurry, check that the lens "
-                "switch is on AF and that a high-contrast target is in the centre of the image.").format(numbers)
+                "Autofocus finished, sharpness unchanged ({0}). If the image is already sharp, nothing is needed. "
+                "If it is blurry: run autofocus again (it can fail when the lens is far out of focus; a few focus "
+                "steps first can help), check that the lens switch is on AF and that a high-contrast target is in "
+                "the centre of the image.").format(numbers)
         return self.tr(
-            "Autofocus finished but sharpness dropped ({0}). Put a high-contrast target in the centre "
-            "of the image and try again.").format(numbers)
+            "Autofocus finished but sharpness dropped ({0}). Put a high-contrast target (marker lane, well "
+            "edge, printed text) in the centre of the image and run autofocus again.").format(numbers)
 
     def focus_step(self, step: FocusStep) -> None:
         self._submit(lambda: self._cam().drive_focus(step))

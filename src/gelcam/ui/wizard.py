@@ -419,10 +419,11 @@ class GelWizard(QDialog):
         self.af_note.hide()
         if value < before * AF_MIN_GAIN:
             self.af_note.setText(self.tr(
-                "Autofocus did not lock — if the scene is dim, the sensor cannot find contrast. Sharpness "
-                "stayed at {0:.1f}.").format(before) + "\n" + self.tr(
-                "Switch the cabinet to white light, run autofocus again, then switch back to UV. The focus "
-                "will hold."))
+                "Autofocus did not lock — sharpness stayed at {0:.1f}. It can fail when the lens is far out of "
+                "focus or the scene is dim, so the sensor finds no contrast.").format(before) + "\n" + self.tr(
+                "Run autofocus again (a few focus steps first can help), check that the lens switch is on AF and "
+                "that a high-contrast target is in the centre. In a dim scene switch the cabinet to white light, "
+                "focus, then switch back to UV. The focus will hold."))
             self.af_note.show()
         self.sharp_hint.setText(self.tr("variance of Laplacian in the magnifier · {0:.1f} before AF").format(before))
 

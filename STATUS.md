@@ -102,7 +102,8 @@ Built over MockCamera, verified offscreen only (not yet on Windows with the 100D
 - [x] Run the UI on the real 100D (13 Nov): connect, live view, exposure OK. Found: no distinct 10× magnifier (hidden for `EdsdkCamera`), AF/focus steps need the lens AF/MF switch on AF, AF success is now measured. See plan ch. 10 "First run of the UI on the real 100D".
 - [x] Wizard series + darks and cable unplug/replug during darks on the real 100D (13 Nov): fixed the 68 s hang (capture now ends when the camera disappears) and file overwrite after the camera counter restarts.
 - [x] Wizard step 7 "Process" on a real series (real darks), 15 s for 4+4 frames (13 Nov); unplug/replug in the live view window (LV3/LV4): card, attempt counter, auto reconnect, live view resumes (13 Nov, layout checked from offscreen screenshots without fonts).
-- [ ] Still to try on the real camera: AF with a contrasty target in the centre, AF point by click (not implemented), a warning when the series is blurrier than the focus step reported, `uv_level` in metadata for white light, visual check of the real windows with fonts (Windows, DPI).
+- [x] AF on a contrasty target measured (13 Nov): works 5 of 7 times, sharpness peak is too narrow for step-wise hill-climbing, no auto-retry; AF hints improved. AF point by click: not built (flat gels, AF frame at the centre is enough if there is contrast there).
+- [ ] Still to do: a warning when the series is blurrier than the focus step reported, `uv_level` in metadata for white light, visual check of the real windows with fonts (Windows, DPI).
 - [ ] Run `tools/edsdk_smoke.py`: does the 100D report lens name and focal length? If yes,
       make the wizard's zoom check automatic (compare with the flat's focal length).
 - [ ] PyInstaller onedir, trimmed Qt modules; test on account without admin rights,

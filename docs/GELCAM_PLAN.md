@@ -653,6 +653,15 @@ The real `GelWizard` was driven offscreen over `EdsdkCamera` (4 light frames and
 - **Not a bug, but a lesson:** the preview is clearly out of focus because the scripted run skipped wizard step 3 (focus). The checklist and the AF feedback in the wizard exist for exactly this; a blurry series would be processed without any warning at step 7 (idea: compare the sharpness of the light frames with the sharpness measured at step 3 and warn).
 - **Metadata:** `uv_level` is written as 70 (profile default) although the declared light was white; the declared light is stored separately (`light_declared`). Consider omitting `uv_level` when the light is not UV.
 
+### Autofocus on a contrasty target, measured on the real 100D (13 Nov 2026)
+
+Printed sheet under white light, lens on AF, live view at 1x, sharpness = mean squared Laplacian of the whole frame (about 45 when blurred, 110-138 when sharp).
+
+- **AF works, but not reliably:** 5 of 7 trials focused after a deliberate defocus (45 -> 111-138); it failed after defocusing towards "Near" (45 -> 46) and once from a state that was already blurred. The result is stable in time (not a matter of waiting longer), and the optimum reached varies between 111 and 138, so contrast AF lands within a tolerance of the peak.
+- **The sharpness profile is a very narrow spike on a flat plateau:** stepping 30 x `Far3` and 30 x `Near3` gave ~44 everywhere except one single step (134). A `Near3` step is larger than the peak and the blurred plateau gives no gradient, so **software hill-climbing with `DriveLensEvf` is not possible**; the steps are only good for fine corrections right next to an in-focus state. Coarse focus must come from the camera's AF.
+- **AF point:** AF acts on the centre of the image. A flat gel is entirely at one distance, so what matters is a contrasty feature (marker lane, well edge, printed text) in the AF frame, not where the AF frame is. "AF point by click" was therefore not built; whether EDSDK can move the AF frame in a non-magnified view was not tested (it needs a target off-centre and a blank centre).
+- **Decision:** no automatic AF retry (the app cannot tell "already sharp" from "AF failed" without risking to disturb a good focus). Instead the AF messages in the live view window and in the wizard tell the operator what to do: run AF again, give a few focus steps first, check the lens AF/MF switch, put a high-contrast target in the centre.
+
 ### Stage 2 pipeline procedure (4 Nov 2026)
 
 - **Done:** `processing/raw_io.py` (`RawFrame`, `read_raw`: CR2 via rawpy without demosaicing, file is not modified) and `processing/channel.py` (`select_channel` R/G/B without interpolation, G = average of the two G pixels in a 2×2 cell, half-resolution output; `saturation_mask`). Tests: synthetic mosaic (exact pixels, different CFA phase, odd dimensions, unchanged input) and a real CR2 from the 100D. `rawpy`, `tifffile` and `opencv-python-headless` are now common dependencies.
