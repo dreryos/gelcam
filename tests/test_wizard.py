@@ -304,6 +304,7 @@ def test_profile_and_uv_frozen_after_first_frame(env):
     assert _wait(app, lambda: wiz.applied)
     _series(app, wiz, 4)
     assert not wiz.dye.isEnabled() and not wiz.uv70.isEnabled() and not wiz.uv100.isEnabled()
+    assert not wiz.uv_off.isEnabled()
     assert wiz.freeze_note.isHidden() is False
     wiz.dye.setEnabled(True)  # even a forced change does not reach the metadata
     wiz.dye.setCurrentIndex(0)
@@ -337,3 +338,19 @@ def test_completion_delivered_during_cancel_wait_shows_notice_once(env, monkeypa
     assert wiz.processed
     kept = [c for c in calls if c[0] == "information" and "results were kept" in c[1]]
     assert len(kept) == 1
+
+
+def test_white_light_series_has_no_uv_level(env):
+    app, _ctrl, _cam, wiz, _sent, _root = env
+    assert wiz.uv_level == 70  # default is unchanged: a UV series at 70 %
+    wiz.uv_off.setChecked(True)
+    assert wiz.uv_level is None and not wiz.uv70.isChecked() and not wiz.uv100.isChecked()
+    for _ in range(5):  # -> step 6
+        wiz.btn_next.click()
+    assert _wait(app, lambda: wiz.applied)
+    _series(app, wiz, 4)
+    assert not wiz.uv_off.isEnabled()  # frozen with the first frame
+    wiz.uv100.setChecked(True)  # even a forced change does not reach the metadata
+    meta = wiz._metadata()
+    assert meta["uv_level"] is None
+    assert json.loads(json.dumps(meta, default=str))["uv_level"] is None  # serialises as null

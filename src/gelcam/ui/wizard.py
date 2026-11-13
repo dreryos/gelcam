@@ -99,7 +99,7 @@ class GelWizard(QDialog):
         self._future: Future[None] | None = None
         self._cancel = threading.Event()
         self._metadata_written = False
-        self._frozen: tuple[DyeProfile, int] | None = None  # (profile, UV level) at the first frame
+        self._frozen: tuple[DyeProfile, int | None] | None = None  # (profile, UV level; None = white light) at the first frame
         self.processed = False
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="gelcam-process")
         self._proc_progress.connect(self._on_proc_progress)
@@ -217,10 +217,12 @@ class GelWizard(QDialog):
         self.profile_hint.setProperty("role", "dim")
         self.uv70 = QRadioButton(self.tr("70 %"))
         self.uv100 = QRadioButton(self.tr("100 %"))
+        self.uv_off = QRadioButton(self.tr("None (white light)"))  # e.g. a documentation shot; uv_level = None
         (self.uv100 if light == "uv100" else self.uv70).setChecked(True)
         uv = QHBoxLayout()
         uv.addWidget(self.uv70)
         uv.addWidget(self.uv100)
+        uv.addWidget(self.uv_off)
         uv.addStretch()
         self.gel_name = QLineEdit("gel")
         self.note = QPlainTextEdit()
@@ -255,14 +257,17 @@ class GelWizard(QDialog):
         return self._frozen[0] if self._frozen else self.dye.currentData()
 
     @property
-    def uv_level(self) -> int:
-        return self._frozen[1] if self._frozen else (100 if self.uv100.isChecked() else 70)
+    def uv_level(self) -> int | None:
+        """UV level of the series (70 or 100 %); None when the series is shot under white light."""
+        if self._frozen:
+            return self._frozen[1]
+        return 100 if self.uv100.isChecked() else (70 if self.uv70.isChecked() else None)
 
     def _freeze(self) -> None:
         """Profile and UV level belong to the frames: from the first one on they cannot change."""
         if self._frozen is None:
             self._frozen = (self.profile, self.uv_level)
-            for w in (self.dye, self.uv70, self.uv100):
+            for w in (self.dye, self.uv70, self.uv100, self.uv_off):
                 w.setEnabled(False)
             self.freeze_note.show()
 
