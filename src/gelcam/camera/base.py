@@ -77,6 +77,9 @@ class ValueNotAllowedError(CameraError):
 
 @runtime_checkable
 class Camera(Protocol):
+    #: Live view magnifier steps this camera really supports (the 100D has no distinct 10x).
+    live_view_zooms: tuple[int, ...]
+
     def connect(self) -> CameraInfo: ...
 
     def disconnect(self) -> None: ...
@@ -101,7 +104,7 @@ class Camera(Protocol):
         ...
 
     def set_live_view_zoom(self, factor: int, x: int | None = None, y: int | None = None) -> None:
-        """Live view zoom: 1, 5 or 10; x, y = centre in sensor coordinates."""
+        """Live view zoom, one of `live_view_zooms`; x, y = centre in sensor coordinates."""
         ...
 
     def stop_live_view(self) -> None: ...

@@ -48,6 +48,10 @@ SHUTDOWN_TIMER_INTERVAL = 60.0  # s; otherwise the 100D goes to sleep after the 
 
 
 class EdsdkCamera:
+    #: Measured on a Canon EOS 100D (13 Nov 2026): the camera accepts the value 10 but shows the same
+    #: field as at 5x, and it reports no list of allowed zoom values, so only 1x and 5x are offered.
+    live_view_zooms = (1, 5)
+
     def __init__(self, vendor_dir: Path | None = None) -> None:
         self._vendor_dir = vendor_dir
         self._worker: EdsdkWorker | None = None
@@ -317,8 +321,9 @@ class EdsdkCamera:
                     sdk.EdsRelease(ref)
 
     def set_live_view_zoom(self, factor: int, x: int | None = None, y: int | None = None) -> None:
-        if factor not in (1, 5, 10):
-            raise CameraError("Zoom supports only 1×, 5× and 10×.")
+        if factor not in self.live_view_zooms:
+            raise CameraError("This camera supports only the live view magnifier steps "
+                              + ", ".join(f"{z}×" for z in self.live_view_zooms) + ".")
         self._call(self._set_zoom, factor, x, y)
 
     def _set_zoom(self, factor: int, x: int | None, y: int | None) -> None:

@@ -23,7 +23,7 @@ _Last updated: 10 Nov 2026._
 | --- | --- |
 | P. Preparation | done – repo, `uv`, test sets in `testdata/` (darks, bias, flat, ladder, UV scene) |
 | 0. EDSDK verification | done on 100D (4 Nov) |
-| 1b. EdsdkCamera | done except **auto power-off (sleep) test** |
+| 1b. EdsdkCamera | done except **auto power-off (sleep) test**; UI first run on the 100D done 13 Nov |
 | 2. Pipeline | **done** (10 Nov) on synthetic and real data; CLI + wizard "Process"; lab PC memory check open |
 | 1a. GUI over simulation | **prototype done** (10 Nov): live view window LV1–LV4 over MockCamera, `ui/main_window.py` |
 | 3. Wizard | **prototype done** (10 Nov): `ui/wizard.py`, captures lights + darks + metadata; step 7 "Process" runs the pipeline |
@@ -99,6 +99,8 @@ Built over MockCamera, verified offscreen only (not yet on Windows with the 100D
 
 - [ ] `tools/bench.py` on the lab PC (2 GB RAM, Win 10) before trusting the memory plan.
 - [ ] Test camera auto power-off (remaining from 1b).
+- [x] Run the UI on the real 100D (13 Nov): connect, live view, exposure OK. Found: no distinct 10× magnifier (hidden for `EdsdkCamera`), AF/focus steps need the lens AF/MF switch on AF, AF success is now measured. See plan ch. 10 "First run of the UI on the real 100D".
+- [ ] Still to try on the real camera: the wizard (series, darks, "Process"), unplug/replug in the UI (LV3/LV4), AF with a contrasty target in the centre, AF point by click (not implemented).
 - [ ] Run `tools/edsdk_smoke.py`: does the 100D report lens name and focal length? If yes,
       make the wizard's zoom check automatic (compare with the flat's focal length).
 - [ ] PyInstaller onedir, trimmed Qt modules; test on account without admin rights,

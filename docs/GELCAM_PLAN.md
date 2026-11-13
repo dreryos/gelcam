@@ -629,6 +629,15 @@ Total approximately 4–6 weeks of focused work; estimates are indicative.
 - **500D:** compatibility test **will not be done** (decision 4 Nov 2026, 500D will not be used). Only the 100D is supported; the code still reads allowed values from the camera.
 
 
+### First run of the UI on the real 100D (13 Nov 2026)
+
+The UI prototype (so far verified only over `MockCamera`) was run against the camera: the controller connects, reads options, shows live view (~11-17 fps), sets exposure, captures `IMG_0001.CR2` without errors; the operator confirmed smooth live view and working exposure settings. Findings:
+
+- **The camera has no distinct 10× magnifier.** It accepts and reports `Evf_Zoom = 10`, but the field is identical to 5× (the fixed pattern of dots stays at the same positions; correlation with a 2× crop of the 5× image is zero, while 5× matches a 5× crop of the full view). It offers no list of zoom values and `Evf_ZoomRect` / `Evf_ZoomPosition` cannot be read (`0x50`, `0x07`). `Camera.live_view_zooms` now declares the steps a camera really has: `EdsdkCamera` (1, 5), `MockCamera` (1, 5, 10); the window hides the unsupported buttons. Writing other zoom values (6, 15) to the camera was deliberately not tried: values must come from a known-safe set (CLAUDE.md rule 4).
+- **AF and focus steps do nothing when the lens switch is on MF.** The camera accepts `DoEvfAf` and `DriveLensEvf` without any error, but the lens does not move (24 large steps changed the live view sharpness by < 3 %). After switching the lens to AF, AF turned a blurred view (Laplacian energy 24) into a sharp one (144). EDSDK cannot read the switch position. Lesson for the wizard and the checklist: *check the AF/MF switch on the lens*.
+- **Autofocus is no longer reported as a success unless measured.** `CameraController.autofocus` measures live view sharpness before and after (mean of 3 frames) and says "Focused" (≥ +10 %), "unchanged" (±10 %, with the hint to check the AF/MF switch and put a contrasty target in the centre) or "dropped" (< −10 %). AF works at the centre of the image; in the magnified view it acts on the centre of the zoomed region. With only blank paper in the centre, AF can even make the metric worse (219 → 148 measured), so a high-contrast target must be in the centre; "AF point by click" is still missing in the prototype.
+- **Mock quirk:** the sharpness metric (variance of the Laplacian) is dominated by noise in the mock's live view, so after a mock AF the message says "unchanged" (155 → 160). Tests use a noise-free mock subclass.
+
 ### Stage 2 pipeline procedure (4 Nov 2026)
 
 - **Done:** `processing/raw_io.py` (`RawFrame`, `read_raw`: CR2 via rawpy without demosaicing, file is not modified) and `processing/channel.py` (`select_channel` R/G/B without interpolation, G = average of the two G pixels in a 2×2 cell, half-resolution output; `saturation_mask`). Tests: synthetic mosaic (exact pixels, different CFA phase, odd dimensions, unchanged input) and a real CR2 from the 100D. `rawpy`, `tifffile` and `opencv-python-headless` are now common dependencies.

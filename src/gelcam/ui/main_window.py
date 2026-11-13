@@ -595,6 +595,9 @@ class MainWindow(QMainWindow):
             self._dim_text(self.lbl_lens, lens.name, self.tr("not reported"))
             self._dim_text(self.lbl_focal, f"{lens.focal_mm:g} mm" if lens.focal_mm else None,
                            self.tr("not reported by the camera"))
+        zooms = status.get("zooms")
+        if zooms is not None:
+            self._apply_zooms(tuple(zooms))
         battery = status.get(Prop.BATTERY)
         for w in self.row_battery:
             w.setVisible(battery is not None)
@@ -630,6 +633,13 @@ class MainWindow(QMainWindow):
             self.stat_sat.set_value(f"{m.saturated_fraction * 100:.2f} %", theme.OK)
 
     # --- zoom, light ---
+    def _apply_zooms(self, zooms: tuple[int, ...]) -> None:
+        """Show only the magnifier steps the connected camera really has."""
+        for z, b in self.zoom_btns.items():
+            b.setVisible(z in zooms)
+        if self.zoom_group.checkedId() not in zooms:
+            self.zoom_btns[1].setChecked(True)
+            self._on_zoom(1)
     def _on_zoom(self, factor: int, send: bool = True) -> None:
         self.cam_card.setVisible(factor == 1)
         self.focus_card.setVisible(factor > 1)

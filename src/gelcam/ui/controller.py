@@ -6,6 +6,7 @@ waits for the camera. Results are returned via Qt signals (thread-safe).
 
 from __future__ import annotations
 
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Callable
@@ -15,6 +16,7 @@ from PySide6.QtCore import QObject, Signal
 
 from ..camera import Camera, CameraError, CameraInfo, FocusStep, LensInfo, Prop
 from ..processing.exposure import measure
+from ..processing.focus import sharpness_rgb
 from ..processing.raw_io import read_frame
 
 
@@ -159,6 +161,7 @@ class CameraController(QObject):
             except Exception:  # noqa: BLE001
                 status["lens"] = LensInfo()
             self.lens = status["lens"]
+            status["zooms"] = tuple(getattr(cam, "live_view_zooms", (1, 5, 10)))
             self.status_ready.emit(status)
             return {p: (cam.allowed_values(p), int(cam.get(p))) for p in (Prop.ISO, Prop.TV, Prop.AV)}
 
@@ -195,7 +198,49 @@ class CameraController(QObject):
         self._submit(lambda: self._cam().set_live_view_zoom(factor))
 
     def autofocus(self) -> None:
-        self._submit(lambda: self._cam().autofocus(), lambda _: self.message.emit(self.tr("Focused.")))
+        """Run AF and report what really happened, measured on live view frames before and after.
+
+        The camera accepts the command without an error even when the lens does not move
+        (e.g. the AF/MF switch is on MF) or there is nothing to focus on, so success is never assumed.
+        """
+        def do() -> tuple[float | None, float | None]:
+            cam = self._cam()
+            before = self._sharpness_now(cam)
+            cam.autofocus()
+            return before, self._sharpness_now(cam)
+
+        def done(result: tuple[float | None, float | None]) -> None:
+            self.message.emit(self._af_message(*result))
+
+        self._submit(do, done)
+
+    @staticmethod
+    def _sharpness_now(cam: Camera, frames: int = 3) -> float | None:
+        """Mean sharpness of a few fresh live view frames; None when none arrived."""
+        values: list[float] = []
+        for _ in range(frames * 4):
+            frame = cam.live_view_frame()
+            if frame is not None:
+                values.append(sharpness_rgb(frame))
+            if len(values) == frames:
+                break
+            time.sleep(0.1)
+        return float(np.mean(values)) if values else None
+
+    def _af_message(self, before: float | None, after: float | None) -> str:
+        if before is None or after is None:
+            return self.tr("Autofocus finished (sharpness could not be measured).")
+        ratio = after / before if before > 0 else float("inf")
+        numbers = f"{before:.1f} → {after:.1f}"
+        if ratio >= 1.10:
+            return self.tr("Focused: sharpness {0}.").format(numbers)
+        if ratio >= 0.90:
+            return self.tr(
+                "Autofocus finished, sharpness unchanged ({0}). If the image is blurry, check that the lens "
+                "switch is on AF and that a high-contrast target is in the centre of the image.").format(numbers)
+        return self.tr(
+            "Autofocus finished but sharpness dropped ({0}). Put a high-contrast target in the centre "
+            "of the image and try again.").format(numbers)
 
     def focus_step(self, step: FocusStep) -> None:
         self._submit(lambda: self._cam().drive_focus(step))

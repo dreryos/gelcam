@@ -32,6 +32,8 @@ _QUALITY_CODES = [0x13FF0F, 0x12FF0F, 0x640013, 0x64FF0F]  # as on the 100D: JPE
 
 
 class MockCamera:
+    live_view_zooms = (1, 5, 10)
+
     def __init__(self, source_dir: Path | None = None, *, seed: int = 0, latency: float = 0.0,
                  available: bool = True) -> None:
         self.available = available
