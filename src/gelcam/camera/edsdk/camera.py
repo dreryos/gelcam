@@ -47,6 +47,20 @@ _FOCUS_PARAMS = {
 SHUTDOWN_TIMER_INTERVAL = 60.0  # s; otherwise the 100D goes to sleep after the set time
 
 
+def unique_path(dest: Path) -> Path:
+    """`dest`, or `name_1.ext`, `name_2.ext`… when it already exists: downloaded frames never overwrite files.
+
+    The camera's file counter can restart (e.g. after a reconnect or a card change), so the same
+    `IMG_0001.CR2` may arrive twice into one folder.
+    """
+    if not dest.exists():
+        return dest
+    n = 1
+    while (candidate := dest.with_name(f"{dest.stem}_{n}{dest.suffix}")).exists():
+        n += 1
+    return candidate
+
+
 class EdsdkCamera:
     #: Measured on a Canon EOS 100D (13 Nov 2026): the camera accepts the value 10 but shows the same
     #: field as at 5x, and it reports no list of allowed zoom values, so only 1x and 5x are offered.
@@ -379,10 +393,14 @@ class EdsdkCamera:
                                    C.kEdsCameraCommand_ShutterButton_Completely_NonAF), "Shutter"))
             check(sdk.EdsSendCommand(self._cam, C.kEdsCameraCommand_PressShutterButton,
                                      C.kEdsCameraCommand_ShutterButton_OFF), "Shutter")
-            got_any = self._worker.wait_until(lambda: bool(self._transfers) or self._transfer_error is not None,
-                                              timeout)
+            # also stops as soon as the camera reports it is gone (cable pulled, camera switched off);
+            # otherwise a lost connection would only be noticed after the whole timeout
+            got_any = self._worker.wait_until(
+                lambda: bool(self._transfers) or self._transfer_error is not None or not self._connected, timeout)
             if self._transfer_error is not None:
                 raise self._transfer_error
+            if not self._transfers and not self._connected:
+                raise CameraError(C.describe_error(C.EDS_ERR_COMM_DISCONNECTED), C.EDS_ERR_COMM_DISCONNECTED)
             if not got_any:
                 raise CameraError("Image did not arrive at the PC (timed out).")
             # with RAW+JPEG two files arrive; wait briefly for the CR2
@@ -417,7 +435,7 @@ class EdsdkCamera:
         check(sdk.EdsGetDirectoryItemInfo(item, byref(info)), "Image information")
         dest_dir = self._capture_dir or Path.cwd()
         name = info.szFileName.decode(errors="replace") or f"IMG_{int(time.time())}.CR2"
-        dest = dest_dir / name
+        dest = unique_path(dest_dir / name)  # never overwrite an earlier frame (the camera counter can restart)
         stream = c_void_p()
         try:
             check(sdk.EdsCreateFileStream(str(dest).encode("mbcs"), C.kEdsFileCreateDisposition_CreateAlways,

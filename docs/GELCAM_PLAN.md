@@ -638,6 +638,14 @@ The UI prototype (so far verified only over `MockCamera`) was run against the ca
 - **Autofocus is no longer reported as a success unless measured.** `CameraController.autofocus` measures live view sharpness before and after (mean of 3 frames) and says "Focused" (≥ +10 %), "unchanged" (±10 %, with the hint to check the AF/MF switch and put a contrasty target in the centre) or "dropped" (< −10 %). AF works at the centre of the image; in the magnified view it acts on the centre of the zoomed region. With only blank paper in the centre, AF can even make the metric worse (219 → 148 measured), so a high-contrast target must be in the centre; "AF point by click" is still missing in the prototype.
 - **Mock quirk:** the sharpness metric (variance of the Laplacian) is dominated by noise in the mock's live view, so after a mock AF the message says "unchanged" (155 → 160). Tests use a noise-free mock subclass.
 
+### Wizard on the real 100D: dark frames and cable pulled (13 Nov 2026)
+
+The real `GelWizard` was driven offscreen over `EdsdkCamera` (4 light frames and 4 dark frames at ISO 100, 8 s; the cabinet light stayed on, so the "darks" tested the mechanics only) while the USB cable was pulled and re-plugged during the darks.
+
+- **Bug found and fixed:** a capture waited for its full timeout (exposure + 60 s) when the camera disappeared, so the interruption dialog appeared only after ~68 s and the app looked frozen. The wait now ends as soon as the camera reports it is gone (`EDS_ERR_COMM_DISCONNECTED`).
+- **After the fix:** connection loss detected within ~2 s, the dialog "Dark frames interrupted after 1 of 4 frames" appeared, "Resume" reconnected the camera (~11 s, the time the cable was out) and the batch completed: 4 lights in `raw/`, 4 darks in `calib/`, nothing discarded.
+- **Second finding:** the camera's file counter does not continue after a reconnect (darks arrived as `IMG_0006`, then `IMG_0001`…`0003`). With `CreateAlways` a repeated name would have **overwritten an earlier frame** in the same folder (violating "raw frames are never modified"). Downloads now go through `unique_path` (`IMG_0001_1.CR2`, …) and never overwrite.
+
 ### Stage 2 pipeline procedure (4 Nov 2026)
 
 - **Done:** `processing/raw_io.py` (`RawFrame`, `read_raw`: CR2 via rawpy without demosaicing, file is not modified) and `processing/channel.py` (`select_channel` R/G/B without interpolation, G = average of the two G pixels in a 2×2 cell, half-resolution output; `saturation_mask`). Tests: synthetic mosaic (exact pixels, different CFA phase, odd dimensions, unchanged input) and a real CR2 from the 100D. `rawpy`, `tifffile` and `opencv-python-headless` are now common dependencies.
