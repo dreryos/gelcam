@@ -379,7 +379,7 @@ def test_wizard_offers_only_the_magnifier_steps_of_the_camera(tmp_path):
     wiz.btn_next.click()
     wiz.btn_next.click()  # -> step 3 (focus)
     assert not wiz.mag_btns[10].isVisible() and wiz.mag_btns[5].isVisible()
-    assert wiz.mag_btns[5].isChecked() and zooms == [5]
+    assert wiz.mag_btns[1].isChecked() and zooms == [1]  # focusing starts at the normal view; 5x is optional
     assert _wait(app, lambda: ctrl._camera is not None) and not errors
     wiz.close()
     ctrl.shutdown()

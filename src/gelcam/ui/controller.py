@@ -37,6 +37,8 @@ class CameraController(QObject):
     flat_analyzed = Signal(object, object)  # Path, FlatStats
     status_ready = Signal(object)  # dict: Prop -> int | str (image quality, battery) and "lens" -> LensInfo
 
+    MAGNIFIER_SETTLE = 0.6  # seconds the live view needs after the magnifier is switched
+
     def __init__(self, camera_factory: Callable[[], Camera]) -> None:
         super().__init__()
         self._factory = camera_factory
@@ -48,6 +50,7 @@ class CameraController(QObject):
         self.lost = False
         self._live_before_loss = False
         self.lens = LensInfo()  # latest from refresh_options
+        self.zoom = 1  # live view magnifier the operator asked for (the camera may drop out of it on its own)
         self.camera_model = ""  # of the connected camera, for the metadata of calibration sets
         self.zooms: tuple[int, ...] = (1, 5, 10)  # magnifier steps of the connected camera (refresh_options)
         self._closed = False
@@ -214,6 +217,7 @@ class CameraController(QObject):
         self._submit(do, lambda f: f is not None and self.frame_ready.emit(f), busy=False)
 
     def set_zoom(self, factor: int) -> None:
+        self.zoom = factor
         self._submit(lambda: self._cam().set_live_view_zoom(factor))
 
     def autofocus(self) -> None:
@@ -221,12 +225,26 @@ class CameraController(QObject):
 
         The camera accepts the command without an error even when the lens does not move
         (e.g. the AF/MF switch is on MF) or there is nothing to focus on, so success is never assumed.
+
+        Autofocus always runs in the normal (1x) view. Measured on the 100D: in the magnified view the camera
+        drops back to 1x when autofocus runs, while the window still believed it was magnified (unstable
+        picture, controls out of step). So the magnifier is switched off first, autofocus runs, and the
+        magnifier the operator had is switched on again afterwards.
         """
         def do() -> tuple[float | None, float | None]:
             cam = self._cam()
-            before = self._sharpness_now(cam)
-            cam.autofocus()
-            return before, self._sharpness_now(cam)
+            zoom = self.zoom
+            if zoom != 1:
+                cam.set_live_view_zoom(1)
+                time.sleep(self.MAGNIFIER_SETTLE)  # the next frames are still magnified for a moment
+            try:
+                before = self._sharpness_now(cam)
+                cam.autofocus()
+                after = self._sharpness_now(cam)
+            finally:
+                if zoom != 1:
+                    cam.set_live_view_zoom(zoom)
+            return before, after
 
         def done(result: tuple[float | None, float | None]) -> None:
             self.message.emit(self._af_message(*result))

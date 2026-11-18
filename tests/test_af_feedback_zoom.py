@@ -95,3 +95,46 @@ def test_window_hides_unsupported_zoom_steps():
     assert win.zoom_btns[10].isVisible()
     win.close()
     win.ctrl.shutdown()
+
+
+def test_autofocus_runs_at_1x_and_restores_the_magnifier():
+    """The real 100D drops out of the magnified view when AF runs; the controller keeps the two in step."""
+    cams: list[CleanMock] = []
+    ctrl = CameraController(lambda: cams.append(CleanMock(seed=3)) or cams[-1])
+    ctrl.MAGNIFIER_SETTLE = 0.05
+    msgs: list[str] = []
+    ctrl.message.connect(msgs.append)
+    ctrl.connect_camera()
+    assert _wait(lambda: bool(cams) and cams[0].is_connected)
+    ctrl.set_live_view(True)
+    assert _wait(lambda: ctrl.live)
+    cam = cams[0]
+    seen: list[int] = []
+    orig = cam.set_live_view_zoom
+    cam.set_live_view_zoom = lambda f, x=None, y=None: (seen.append(f), orig(f, x, y))[1]
+    ctrl.set_zoom(5)
+    assert _wait(lambda: cam._zoom[0] == 5)
+    seen.clear()
+    ctrl.autofocus()
+    assert _wait(lambda: any(m.startswith("Focused") for m in msgs))
+    assert seen == [1, 5]  # magnifier off for the autofocus, on again afterwards
+    assert cam._zoom[0] == 5 and ctrl.zoom == 5
+    ctrl.shutdown()
+
+
+def test_autofocus_at_1x_does_not_touch_the_magnifier():
+    cams: list[CleanMock] = []
+    ctrl = CameraController(lambda: cams.append(CleanMock(seed=3)) or cams[-1])
+    ctrl.connect_camera()
+    assert _wait(lambda: bool(cams) and cams[0].is_connected)
+    ctrl.set_live_view(True)
+    assert _wait(lambda: ctrl.live)
+    seen: list[int] = []
+    orig = cams[0].set_live_view_zoom
+    cams[0].set_live_view_zoom = lambda f, x=None, y=None: (seen.append(f), orig(f, x, y))[1]
+    msgs: list[str] = []
+    ctrl.message.connect(msgs.append)
+    ctrl.autofocus()
+    assert _wait(lambda: any(m.startswith("Focused") for m in msgs))
+    assert seen == []
+    ctrl.shutdown()

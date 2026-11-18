@@ -109,6 +109,7 @@ Built over MockCamera, verified offscreen only (not yet on Windows with the 100D
       make the wizard's zoom check automatic (compare with the flat's focal length).
 - [x] PyInstaller onedir package (`packaging/build.py`, 233 MB / 92 MB zip, selftest `GelCam-console.exe --selftest --camera` passes with the real 100D, VC++ runtime bundled) (18 Nov).
 - [x] Settings: root folder for images and the flat library (18 Nov); `--bench --sample` real-pipeline benchmark; `packaging/deploy.py`, first deployment on E:/GelCam-lab (18 Nov).
+- [x] First test on the lab PC (18 Nov, Windows 10, 4 GB, log clean, bench 137 s / 627 MB). Findings fixed the same day: autofocus at 1x with the magnifier restored, focus controls at every zoom, cheaper live view, histogram switch (see plan ch. 10 "First run on the lab PC").
 - [ ] Test the package on a clean Windows 10 PC / account without admin rights (follow `LAB-TEST-CHECKLIST.txt`, bring back gelcam.log and the bench report); check AppLocker/SmartScreen; confirm the Canon licence allows shipping the EDSDK DLLs.
 - [x] Czech translation: 226 texts, `tools/translations.py`, loaded by `--lang cs` / Czech Windows / `GelCam-Czech.cmd` (18 Nov). A native Czech reader should review the wording.
 - [ ] Final UI check on Windows (fonts, DPI); week of real gels without blocking error.

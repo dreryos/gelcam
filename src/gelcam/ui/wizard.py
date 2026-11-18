@@ -407,15 +407,19 @@ class GelWizard(QDialog):
                                                                  "the start of each session.")))
         col.addStretch()
         lay.addLayout(col, 2)
-        self._set_mag(max(self.ctrl.zooms), send=False)
+        self._set_mag(1, send=False)
         return w
 
     def _apply_zooms(self) -> None:
-        """Offer only the magnifier steps the camera really has and start at the strongest one."""
+        """Offer only the magnifier steps the camera really has; focusing starts in the normal (1x) view.
+
+        Autofocus is unreliable in the magnified view (the camera drops out of it), so 1x is where it is done;
+        the magnifier is there to check the result.
+        """
         zooms = self.ctrl.zooms
         for z, b in self.mag_btns.items():
             b.setVisible(z in zooms)
-        self._set_mag(max(zooms))
+        self._set_mag(1)
 
     def _set_mag(self, z: int, send: bool = True) -> None:
         self.mag_btns[z].setChecked(True)

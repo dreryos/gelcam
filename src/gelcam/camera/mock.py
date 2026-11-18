@@ -143,6 +143,8 @@ class MockCamera:
             raise CameraError("Focus works only in live view.")
         time.sleep(self._latency)
         self._defocus = float(self._rng.uniform(0.0, 1.5))
+        if self._zoom[0] != 1:  # like the real 100D: autofocus drops out of the magnified view
+            self._zoom = (1, self._zoom[1], self._zoom[2])
 
     def drive_focus(self, step: FocusStep) -> None:
         self._require()

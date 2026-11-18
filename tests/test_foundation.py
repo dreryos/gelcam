@@ -127,3 +127,22 @@ def test_preview_helpers():
     assert mask.sum() == 1
     painted = preview.overlay_clipping(f, mask)
     assert tuple(painted[0, 0]) == (255, 40, 40) and tuple(f[0, 0]) == (255, 255, 255)
+
+
+def test_cheaper_display_helpers_give_the_same_results():
+    rng = np.random.default_rng(7)
+    f = rng.integers(0, 256, (640, 960, 3), dtype=np.uint8)  # the size of a live view frame
+    # sharpness: subsampling before averaging the channels is exactly the old full-resolution formula
+    old = sharpness(f.astype(np.float32).mean(axis=2)[::2, ::2])
+    assert sharpness_rgb(f) == pytest.approx(old, rel=1e-6)
+    # histogram: bincount equals np.histogram at full resolution, and is a close estimate from every 2nd pixel
+    for ch in range(3):
+        full = preview.histogram(f, ch, bins=64, step=1)
+        assert (full == np.histogram(f[..., ch], bins=64, range=(0, 256))[0]).all()
+        assert preview.histogram(f, ch).sum() * 4 == full.sum()  # default: every 2nd pixel of a large frame
+        assert np.abs(preview.histogram(f, ch) * 4 - full).max() < 0.1 * full.max()  # a close estimate
+    assert (preview.histogram(f, 0, bins=48, step=1) == np.histogram(f[..., 0], bins=48, range=(0, 256))[0]).all()
+    # display: the default setting is the frame itself, anything else maps through the table
+    assert preview.apply_display(f, 0, 255, 1.0, False) is f
+    assert preview.apply_display(f, 10, 200, 1.0, False) is not f
+    assert (preview.apply_display(f, 0, 255, 1.0, True) == 255 - f).all()

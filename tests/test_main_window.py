@@ -62,15 +62,18 @@ def test_exposure_capture_and_measurement(app, tmp_path):
     win.close()
 
 
-def test_zoom_10_shows_focus_card_and_af_works(app, tmp_path):
+def test_focus_controls_are_available_at_every_zoom(app, tmp_path):
     win, cams = _window(tmp_path)
+    win.show()
     errors = []
     win.ctrl.error.connect(errors.append)
     assert _wait(app, lambda: win._frame is not None)
-    assert win.cam_card.isVisibleTo(win) and not win.focus_card.isVisibleTo(win)
-    win.zoom_btns[10].click()
-    assert win.focus_card.isVisibleTo(win) and not win.cam_card.isVisibleTo(win)
-    assert _wait(app, lambda: cams[0]._zoom[0] == 10)
+    assert win.focus_card.isVisibleTo(win) and win.cam_card.isVisibleTo(win)  # both at the normal 1x view
+    win.btn_af.click()  # autofocus works without any magnifier
+    assert _wait(app, lambda: cams[0].defocus < 2)
+    win.zoom_btns[5].click()
+    assert win.focus_card.isVisibleTo(win) and win.cam_card.isVisibleTo(win)  # and nothing is swapped at 5x
+    assert _wait(app, lambda: cams[0]._zoom[0] == 5)
     win.btn_af.click()
     assert _wait(app, lambda: cams[0].defocus < 2)
     win.focus_btns[list(win.focus_btns)[-1]].click()
@@ -189,3 +192,20 @@ def test_wizard_is_window_modal(app, tmp_path):
     assert win._wizard.windowModality() == Qt.WindowModality.WindowModal and win._wizard.isModal()
     win._wizard.close()
     win.ctrl.shutdown()
+
+
+def test_histogram_can_be_switched_off_and_is_then_not_computed(app, tmp_path):
+    win, _cams = _window(tmp_path)
+    win.show()
+    assert _wait(app, lambda: win._frame is not None)
+    calls: list[int] = []
+    orig = win.hist.set_data
+    win.hist.set_data = lambda *a, **k: (calls.append(1), orig(*a, **k))[1]
+    win.btn_hist.setChecked(False)
+    assert win.hist.isHidden()
+    before, n0 = len(calls), win._frame_n
+    assert _wait(app, lambda: win._frame_n >= n0 + 8)  # several more frames arrive
+    assert len(calls) == before  # none of them computed a histogram
+    win.btn_hist.setChecked(True)
+    assert not win.hist.isHidden() and len(calls) > before  # switching on draws it at once
+    win.close()

@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QMainWindow,
     QPushButton,
+    QScrollArea,
     QSlider,
     QStackedWidget,
     QVBoxLayout,
@@ -189,11 +190,14 @@ class MainWindow(QMainWindow):
         tools.addWidget(QLabel(self.tr("View")))
         self.btn_grid = QPushButton(self.tr("Grid"))
         self.btn_clip = QPushButton(self.tr("Clipping"))
-        for b in (self.btn_grid, self.btn_clip):
+        self.btn_hist = QPushButton(self.tr("Histogram"))  # off = no histogram to compute: less CPU load
+        for b in (self.btn_grid, self.btn_clip, self.btn_hist):
             b.setCheckable(True)
             tools.addWidget(b)
         self.btn_grid.toggled.connect(lambda on: self.view.set_grid(on))
         self.btn_clip.toggled.connect(lambda _: self._render())
+        self.btn_hist.setChecked(True)
+        self.btn_hist.toggled.connect(self._on_hist_toggled)
         tools.addWidget(QLabel(self.tr("Zoom")))
         self.zoom_group = QButtonGroup(self)
         self.zoom_btns: dict[int, QPushButton] = {}
@@ -394,7 +398,6 @@ class MainWindow(QMainWindow):
         self.focus_card.body.addLayout(steps)
         self.focus_card.body.addWidget(Note(self.tr(
             "Focus under white light, then switch back to UV. The shutter never refocuses.")))
-        self.focus_card.hide()
 
         exp = Card(self.tr("Exposure"))
         eform = QFormLayout()
@@ -428,13 +431,20 @@ class MainWindow(QMainWindow):
         single.body.addLayout(stats)
         single.body.addWidget(measured)
 
-        col = QWidget()
-        col.setFixedWidth(300)
-        lay = QVBoxLayout(col)
+        # Focus, exposure and the single frame are what is used all the time (at every zoom); the camera
+        # information goes last. The column scrolls, so it also works on a small laptop screen.
+        body = QWidget()
+        lay = QVBoxLayout(body)
         lay.setContentsMargins(0, 0, 0, 0)
-        for w in (self.cam_card, self.focus_card, exp, single):
+        for w in (self.focus_card, exp, single, self.cam_card):
             lay.addWidget(w)
         lay.addStretch(1)
+        col = QScrollArea()
+        col.setFixedWidth(318)  # 300 for the cards + the scroll bar
+        col.setWidgetResizable(True)
+        col.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        col.setFrameShape(QFrame.Shape.NoFrame)
+        col.setWidget(body)
         return col
 
     def _build_status_bar(self) -> None:
@@ -452,7 +462,7 @@ class MainWindow(QMainWindow):
 
     def _set_tab_order(self) -> None:
         chain: list[QWidget] = [
-            self.light_combo, self.btn_new, self.btn_grid, self.btn_clip, *self.zoom_btns.values(),
+            self.light_combo, self.btn_new, self.btn_grid, self.btn_clip, self.btn_hist, *self.zoom_btns.values(),
             self.btn_retry, self.btn_open_log, self.btn_reconnect, self.btn_cancel,
             self.btn_auto, self.btn_reset, self.btn_invert, self.sl_black, self.sl_white, self.sl_gamma,
             *self.chan_btns, self.btn_af, *self.focus_btns.values(), *self.combos.values(),
@@ -643,9 +653,12 @@ class MainWindow(QMainWindow):
         if self.zoom_group.checkedId() not in zooms:
             self.zoom_btns[1].setChecked(True)
             self._on_zoom(1)
+    def _on_hist_toggled(self, on: bool) -> None:
+        self.hist.setVisible(on)
+        if on:
+            self._render(stats=True)
+
     def _on_zoom(self, factor: int, send: bool = True) -> None:
-        self.cam_card.setVisible(factor == 1)
-        self.focus_card.setVisible(factor > 1)
         if send:
             self.ctrl.set_zoom(factor)
 
@@ -704,7 +717,8 @@ class MainWindow(QMainWindow):
         prefix = self.tr("camera magnifier {0}× · ").format(zoom) if zoom > 1 else ""
         self.view.set_caption(prefix + self.tr("live view · {0} × {1} · {2:.0f} fps").format(w, h, self._fps()))
         if stats:
-            self.hist.set_data(histogram(frame, ch), black, white)
+            if self.btn_hist.isChecked():
+                self.hist.set_data(histogram(frame, ch), black, white)
 
     def _on_sliders(self) -> None:
         self.lbl_black.setText(str(self.sl_black.value()))

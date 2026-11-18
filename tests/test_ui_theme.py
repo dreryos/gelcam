@@ -57,7 +57,6 @@ def test_buttons_are_named_and_large_enough(window):
 
 
 def test_tab_order_follows_the_right_column(window):
-    window.zoom_btns[10].click()  # Focus card replaces the Camera card
     expected = [window.btn_af, *window.focus_btns.values(), *window.combos.values(), window.btn_capture]
     chain, w = [], window.btn_af
     for _ in range(300):

@@ -4,37 +4,37 @@
 <context>
     <name>CameraController</name>
     <message>
-        <location filename="../ui/controller.py" line="83"/>
+        <location filename="../ui/controller.py" line="86"/>
         <source>Camera is not connected.</source>
         <translation>Fotoaparát není připojen.</translation>
     </message>
     <message>
-        <location filename="../ui/controller.py" line="190"/>
+        <location filename="../ui/controller.py" line="193"/>
         <source>Set {0}.</source>
         <translation>Nastaveno: {0}.</translation>
     </message>
     <message>
-        <location filename="../ui/controller.py" line="251"/>
+        <location filename="../ui/controller.py" line="269"/>
         <source>Autofocus finished (sharpness could not be measured).</source>
         <translation>Autofokus dokončen (ostrost se nepodařilo změřit).</translation>
     </message>
     <message>
-        <location filename="../ui/controller.py" line="255"/>
+        <location filename="../ui/controller.py" line="273"/>
         <source>Focused: sharpness {0}.</source>
         <translation>Zaostřeno: ostrost {0}.</translation>
     </message>
     <message>
-        <location filename="../ui/controller.py" line="258"/>
+        <location filename="../ui/controller.py" line="276"/>
         <source>Autofocus finished, sharpness unchanged ({0}). If the image is already sharp, nothing is needed. If it is blurry: run autofocus again (it can fail when the lens is far out of focus; a few focus steps first can help), check that the lens switch is on AF and that a high-contrast target is in the centre of the image.</source>
         <translation>Autofokus dokončen, ostrost se nezměnila ({0}). Pokud je obraz už ostrý, nic dalšího není potřeba. Pokud je rozmazaný: spusťte autofokus znovu (může selhat, když je objektiv hodně rozostřený; pomoci může nejdřív pár kroků ostření), zkontrolujte, že přepínač na objektivu je na AF a že je uprostřed obrazu kontrastní cíl.</translation>
     </message>
     <message>
-        <location filename="../ui/controller.py" line="263"/>
+        <location filename="../ui/controller.py" line="281"/>
         <source>Autofocus finished but sharpness dropped ({0}). Put a high-contrast target (marker lane, well edge, printed text) in the centre of the image and run autofocus again.</source>
         <translation>Autofokus dokončen, ale ostrost klesla ({0}). Dejte doprostřed obrazu kontrastní cíl (pruh markeru, okraj jamky, tištěný text) a spusťte autofokus znovu.</translation>
     </message>
     <message>
-        <location filename="../ui/controller.py" line="270"/>
+        <location filename="../ui/controller.py" line="288"/>
         <source>Capturing…</source>
         <translation>Snímám…</translation>
     </message>
@@ -258,21 +258,21 @@
     </message>
     <message>
         <location filename="../ui/wizard.py" line="122"/>
-        <location filename="../ui/wizard.py" line="637"/>
+        <location filename="../ui/wizard.py" line="641"/>
         <source>White light</source>
         <translation>Bílé světlo</translation>
     </message>
     <message>
         <location filename="../ui/wizard.py" line="122"/>
-        <location filename="../ui/wizard.py" line="637"/>
-        <location filename="../ui/wizard.py" line="738"/>
+        <location filename="../ui/wizard.py" line="641"/>
+        <location filename="../ui/wizard.py" line="742"/>
         <source>UV 70 %</source>
         <translation>UV 70 %</translation>
     </message>
     <message>
         <location filename="../ui/wizard.py" line="123"/>
-        <location filename="../ui/wizard.py" line="637"/>
-        <location filename="../ui/wizard.py" line="738"/>
+        <location filename="../ui/wizard.py" line="641"/>
+        <location filename="../ui/wizard.py" line="742"/>
         <source>UV 100 %</source>
         <translation>UV 100 %</translation>
     </message>
@@ -295,7 +295,7 @@
     </message>
     <message>
         <location filename="../ui/wizard.py" line="172"/>
-        <location filename="../ui/wizard.py" line="458"/>
+        <location filename="../ui/wizard.py" line="462"/>
         <source>Test exposure</source>
         <translation>Zkušební expozice</translation>
     </message>
@@ -311,14 +311,14 @@
     </message>
     <message>
         <location filename="../ui/wizard.py" line="173"/>
-        <location filename="../ui/wizard.py" line="852"/>
+        <location filename="../ui/wizard.py" line="856"/>
         <source>Review and export</source>
         <translation>Kontrola a export</translation>
     </message>
     <message>
         <location filename="../ui/wizard.py" line="198"/>
-        <location filename="../ui/wizard.py" line="1327"/>
-        <location filename="../ui/wizard.py" line="1354"/>
+        <location filename="../ui/wizard.py" line="1331"/>
+        <location filename="../ui/wizard.py" line="1358"/>
         <source>Cancel</source>
         <translation>Zrušit</translation>
     </message>
@@ -329,7 +329,7 @@
     </message>
     <message>
         <location filename="../ui/wizard.py" line="200"/>
-        <location filename="../ui/wizard.py" line="1059"/>
+        <location filename="../ui/wizard.py" line="1063"/>
         <source>Continue</source>
         <translation>Pokračovat</translation>
     </message>
@@ -529,506 +529,506 @@
         <translation>Přeostřete po každé změně zoomu a na začátku každé relace.</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="422"/>
+        <location filename="../ui/wizard.py" line="426"/>
         <source>camera magnifier {0}×</source>
         <translation>lupa fotoaparátu {0}×</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="443"/>
+        <location filename="../ui/wizard.py" line="447"/>
         <source>Autofocus did not lock — sharpness stayed at {0:.1f}. It can fail when the lens is far out of focus or the scene is dim, so the sensor finds no contrast.</source>
         <translation>Autofokus nezachytil cíl — ostrost zůstala {0:.1f}. Může selhat, když je objektiv hodně rozostřený nebo je scéna tmavá, takže snímač nenajde kontrast.</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="445"/>
+        <location filename="../ui/wizard.py" line="449"/>
         <source>Run autofocus again (a few focus steps first can help), check that the lens switch is on AF and that a high-contrast target is in the centre. In a dim scene switch the cabinet to white light, focus, then switch back to UV. The focus will hold.</source>
         <translation>Spusťte autofokus znovu (může pomoci nejdřív pár kroků ostření), zkontrolujte, že přepínač na objektivu je na AF a že je uprostřed kontrastní cíl. Při tmavé scéně přepněte skříň na bílé světlo, zaostřete a pak přepněte zpět na UV. Zaostření vydrží.</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="449"/>
+        <location filename="../ui/wizard.py" line="453"/>
         <source>variance of Laplacian in the magnifier · {0:.1f} before AF</source>
         <translation>rozptyl Laplaciánu v lupě · {0:.1f} před AF</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="461"/>
+        <location filename="../ui/wizard.py" line="465"/>
         <source>Brightest region</source>
         <translation>Nejjasnější oblast</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="462"/>
+        <location filename="../ui/wizard.py" line="466"/>
         <source>Of range</source>
         <translation>Z rozsahu</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="463"/>
+        <location filename="../ui/wizard.py" line="467"/>
         <source>Saturated</source>
         <translation>Saturováno</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="467"/>
+        <location filename="../ui/wizard.py" line="471"/>
         <source>Take test frame</source>
         <translation>Pořídit zkušební snímek</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="472"/>
+        <location filename="../ui/wizard.py" line="476"/>
         <source>Exposure proposal</source>
         <translation>Návrh expozice</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="478"/>
+        <location filename="../ui/wizard.py" line="482"/>
         <source>Apply proposal</source>
         <translation>Použít návrh</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="491"/>
+        <location filename="../ui/wizard.py" line="495"/>
         <source>Exposure is not extended beyond 30 s — take more frames instead.</source>
         <translation>Expozice se neprodlužuje nad 30 s — raději pořiďte víc snímků.</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="517"/>
+        <location filename="../ui/wizard.py" line="521"/>
         <source>{0} · target 70–80 % of range without saturation</source>
         <translation>{0} · cíl 70–80 % rozsahu bez saturace</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="540"/>
+        <location filename="../ui/wizard.py" line="544"/>
         <source>The brightest region is saturated — {0:.2f} % of pixels at {1:,.0f} ADU above black, the white level at this ISO. It cannot be quantified.</source>
         <translation>Nejjasnější oblast je saturovaná — {0:.2f} % pixelů je na {1:,.0f} ADU nad černou, tedy na úrovni bílé při tomto ISO. Nejde kvantifikovat.</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="543"/>
+        <location filename="../ui/wizard.py" line="547"/>
         <source>Shorten the exposure to {0:g} s, or continue if only the faint bands matter.</source>
         <translation>Zkraťte expozici na {0:g} s, nebo pokračujte, pokud vás zajímají jen slabé pruhy.</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="559"/>
+        <location filename="../ui/wizard.py" line="563"/>
         <source>Dark frames</source>
         <translation>Tmavé snímky (darky)</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="565"/>
+        <location filename="../ui/wizard.py" line="569"/>
         <source>Taken automatically right after the series, with the lights off.</source>
         <translation>Pořizují se automaticky hned po sérii, při zhasnutém světle.</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="566"/>
+        <location filename="../ui/wizard.py" line="570"/>
         <source>Same exposure time and ISO as the light frames — otherwise warm pixels remain.</source>
         <translation>Stejná expozice a ISO jako u světlých snímků — jinak zůstanou teplé pixely.</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="571"/>
+        <location filename="../ui/wizard.py" line="575"/>
         <source>Automatic</source>
         <translation>Automaticky</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="573"/>
-        <location filename="../ui/wizard.py" line="584"/>
+        <location filename="../ui/wizard.py" line="577"/>
+        <location filename="../ui/wizard.py" line="588"/>
         <source>Use stored</source>
         <translation>Použít uložené</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="575"/>
+        <location filename="../ui/wizard.py" line="579"/>
         <source>No dark library yet in the prototype</source>
         <translation>Prototyp zatím nemá knihovnu darků</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="581"/>
+        <location filename="../ui/wizard.py" line="585"/>
         <source>Flat field</source>
         <translation>Flat field</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="876"/>
+        <location filename="../ui/wizard.py" line="880"/>
         <source>Process subtracts the dark frames, stacks the light frames and saves result.tif (linear, 16-bit) and preview.png in the gel folder. The RAW frames are never modified; the flat field is divided out if one is selected. Without Process, Finish only saves the frames and metadata for later processing.</source>
         <translation>Zpracování odečte tmavé snímky, sloučí světlé snímky a uloží result.tif (lineární, 16 bitů) a preview.png do složky gelu. Snímky RAW se nikdy nemění; je-li vybrán flat field, vydělí se jím. Bez zpracování tlačítko Dokončit uloží jen snímky a metadata pro pozdější zpracování.</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="678"/>
+        <location filename="../ui/wizard.py" line="682"/>
         <source>The flat correction will be skipped and recorded as skipped in metadata.json.</source>
         <translation>Korekce flat fieldem se vynechá a v metadata.json se zapíše jako vynechaná.</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="610"/>
+        <location filename="../ui/wizard.py" line="614"/>
         <source>Darks are taken right after the series, not from a library: hot pixels depend on sensor temperature, and after a series the sensor is warmer.</source>
         <translation>Darky se pořizují hned po sérii, ne z knihovny: horké pixely závisejí na teplotě snímače a po sérii je snímač teplejší.</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="583"/>
+        <location filename="../ui/wizard.py" line="587"/>
         <source>No flat field</source>
         <translation>Bez flat fieldu</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="605"/>
+        <location filename="../ui/wizard.py" line="609"/>
         <source>Take new flat…</source>
         <translation>Pořídit nový flat…</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="639"/>
+        <location filename="../ui/wizard.py" line="643"/>
         <source>{0} · {1} · {2:g} s · {3} d old</source>
         <translation>{0} · {1} · {2:g} s · stáří {3} d</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="659"/>
+        <location filename="../ui/wizard.py" line="663"/>
         <source>taken under another light than this series</source>
         <translation>pořízen při jiném světle než série</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="660"/>
+        <location filename="../ui/wizard.py" line="664"/>
         <source>taken at another aperture</source>
         <translation>pořízen při jiné cloně</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="661"/>
+        <location filename="../ui/wizard.py" line="665"/>
         <source>taken with another lens</source>
         <translation>pořízen s jiným objektivem</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="662"/>
+        <location filename="../ui/wizard.py" line="666"/>
         <source>the set is incomplete</source>
         <translation>sada je neúplná</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="663"/>
+        <location filename="../ui/wizard.py" line="667"/>
         <source>frames of the set are missing from the library</source>
         <translation>snímky sady chybí v knihovně</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="664"/>
+        <location filename="../ui/wizard.py" line="668"/>
         <source>older than 30 days</source>
         <translation>starší než 30 dní</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="665"/>
+        <location filename="../ui/wizard.py" line="669"/>
         <source>the zoom position was not confirmed when it was taken</source>
         <translation>při pořízení nebyla potvrzena poloha zoomu</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="666"/>
+        <location filename="../ui/wizard.py" line="670"/>
         <source>part of it was saturated</source>
         <translation>část byla saturovaná</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="673"/>
+        <location filename="../ui/wizard.py" line="677"/>
         <source>The library has no flat field yet. Take one for this UV level, or continue without a flat field.</source>
         <translation>Knihovna zatím neobsahuje žádný flat field. Pořiďte ho pro tuto úroveň UV, nebo pokračujte bez flat fieldu.</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="683"/>
+        <location filename="../ui/wizard.py" line="687"/>
         <source>{0} · centre {1:.0f} ADU · darkest corner {2:.0f} % of the centre · {3} frames + {4} darks</source>
         <translation>{0} · střed {1:.0f} ADU · nejtmavší roh {2:.0f} % středu · {3} snímků + {4} darků</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="687"/>
+        <location filename="../ui/wizard.py" line="691"/>
         <source>This flat does not apply to this series</source>
         <translation>Tento flat se pro tuto sérii nehodí</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="688"/>
+        <location filename="../ui/wizard.py" line="692"/>
         <source>Check this flat</source>
         <translation>Zkontrolujte tento flat</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="707"/>
+        <location filename="../ui/wizard.py" line="711"/>
         <source>Flat field: none</source>
         <translation>Flat field: žádný</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="708"/>
+        <location filename="../ui/wizard.py" line="712"/>
         <source>Flat field: {0} ({1} d old)</source>
         <translation>Flat field: {0} (stáří {1} d)</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="738"/>
+        <location filename="../ui/wizard.py" line="742"/>
         <source>white light</source>
         <translation>bílé světlo</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="739"/>
+        <location filename="../ui/wizard.py" line="743"/>
         <source>The background of the test frame is {0:.1f}x as bright as the stored flat of {1}.</source>
         <translation>Pozadí zkušebního snímku je {0:.1f}× jasnější než uložený flat ({1}).</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="742"/>
+        <location filename="../ui/wizard.py" line="746"/>
         <source>It fits the flat of {0} much better: is that light on?</source>
         <translation>Mnohem lépe odpovídá flatu ({0}): svítí opravdu to světlo?</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="745"/>
+        <location filename="../ui/wizard.py" line="749"/>
         <source>Check which light is on, the exposure and the flat. A UV level that is off by one step (70 % / 100 %) cannot be detected this way.</source>
         <translation>Zkontrolujte, které světlo svítí, expozici a flat. Chybu o jeden stupeň UV (70 % / 100 %) takto poznat nejde.</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="753"/>
+        <location filename="../ui/wizard.py" line="757"/>
         <source>Series</source>
         <translation>Série</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="755"/>
+        <location filename="../ui/wizard.py" line="759"/>
         <source>Frame count</source>
         <translation>Počet snímků</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="762"/>
+        <location filename="../ui/wizard.py" line="766"/>
         <source>Start series</source>
         <translation>Spustit sérii</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="766"/>
+        <location filename="../ui/wizard.py" line="770"/>
         <source>Background noise falls with √N — 8 frames means roughly 2.8× better signal-to-noise.</source>
         <translation>Šum pozadí klesá s √N — 8 snímků znamená zhruba 2,8× lepší poměr signálu k šumu.</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="772"/>
+        <location filename="../ui/wizard.py" line="776"/>
         <source>Progress</source>
         <translation>Průběh</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="780"/>
+        <location filename="../ui/wizard.py" line="784"/>
         <source>Saturated (last frame)</source>
         <translation>Saturováno (poslední snímek)</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="791"/>
+        <location filename="../ui/wizard.py" line="795"/>
         <source>Turn off all light</source>
         <translation>Zhasněte všechna světla</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="792"/>
+        <location filename="../ui/wizard.py" line="796"/>
         <source>UV lamp and white light off</source>
         <translation>UV lampa i bílé světlo vypnuté</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="793"/>
+        <location filename="../ui/wizard.py" line="797"/>
         <source>Cabinet door closed</source>
         <translation>Dvířka skříně zavřená</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="793"/>
+        <location filename="../ui/wizard.py" line="797"/>
         <source>Eyepiece covered</source>
         <translation>Okulár zakrytý</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="797"/>
+        <location filename="../ui/wizard.py" line="801"/>
         <source>Take dark frames</source>
         <translation>Pořídit tmavé snímky</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="810"/>
+        <location filename="../ui/wizard.py" line="814"/>
         <source>Live view stays off during the series so the sensor does not warm up.</source>
         <translation>Živý náhled zůstává během série vypnutý, aby se snímač nezahříval.</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="811"/>
+        <location filename="../ui/wizard.py" line="815"/>
         <source>Darks are taken right after the last exposure, with the camera in the same state.</source>
         <translation>Darky se pořizují hned po poslední expozici, se stejným stavem fotoaparátu.</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="857"/>
+        <location filename="../ui/wizard.py" line="861"/>
         <source>Process</source>
         <translation>Zpracovat</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="859"/>
+        <location filename="../ui/wizard.py" line="863"/>
         <source>Open folder</source>
         <translation>Otevřít složku</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="888"/>
+        <location filename="../ui/wizard.py" line="892"/>
         <source>raw/: {0} light frames ({1} test)</source>
         <translation>raw/: {0} světlých snímků ({1} zkušební)</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="889"/>
+        <location filename="../ui/wizard.py" line="893"/>
         <source>calib/: {0} dark frames</source>
         <translation>calib/: {0} tmavých snímků</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="890"/>
+        <location filename="../ui/wizard.py" line="894"/>
         <source>Profile: {0} · channel {1}</source>
         <translation>Profil: {0} · kanál {1}</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="891"/>
+        <location filename="../ui/wizard.py" line="895"/>
         <source>Exposure: {0}</source>
         <translation>Expozice: {0}</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="907"/>
+        <location filename="../ui/wizard.py" line="911"/>
         <source>The series is much blurrier than the test frame ({0:.0f} % of its sharpness). The focus may have drifted: check the focus (step 3) and shoot the series again.</source>
         <translation>Série je mnohem rozmazanější než zkušební snímek ({0:.0f} % jeho ostrosti). Ostření mohlo ujet: zkontrolujte ostření (krok 3) a sérii pořiďte znovu.</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="911"/>
+        <location filename="../ui/wizard.py" line="915"/>
         <source>Frame(s) {0} are blurrier than the rest of the series (the worst has {1:.0f} % of the median sharpness): the camera or the gel may have moved.</source>
         <translation>Snímek(y) {0} jsou rozmazanější než zbytek série (nejhorší má {1:.0f} % mediánu ostrosti): fotoaparát nebo gel se mohl pohnout.</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="916"/>
+        <location filename="../ui/wizard.py" line="920"/>
         <source>Autofocus did not lock at step 3 and was not repeated successfully. Check that the series is sharp.</source>
         <translation>Autofokus v kroku 3 nezachytil cíl a pak se nepodařilo ho zopakovat. Zkontrolujte, že je série ostrá.</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="930"/>
+        <location filename="../ui/wizard.py" line="934"/>
         <source>Processing…</source>
         <translation>Zpracovávám…</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="956"/>
+        <location filename="../ui/wizard.py" line="960"/>
         <source>Reading light frames</source>
         <translation>Čtu světlé snímky</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="957"/>
+        <location filename="../ui/wizard.py" line="961"/>
         <source>Reading dark frames</source>
         <translation>Čtu tmavé snímky</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="958"/>
+        <location filename="../ui/wizard.py" line="962"/>
         <source>Building master flat</source>
         <translation>Vytvářím master flat</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="959"/>
+        <location filename="../ui/wizard.py" line="963"/>
         <source>Calibrating</source>
         <translation>Kalibruji</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="960"/>
+        <location filename="../ui/wizard.py" line="964"/>
         <source>Aligning</source>
         <translation>Zarovnávám</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="961"/>
+        <location filename="../ui/wizard.py" line="965"/>
         <source>Stacking</source>
         <translation>Slučuji snímky</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="962"/>
+        <location filename="../ui/wizard.py" line="966"/>
         <source>Writing result</source>
         <translation>Zapisuji výsledek</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="963"/>
+        <location filename="../ui/wizard.py" line="967"/>
         <source>Done</source>
         <translation>Hotovo</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="969"/>
+        <location filename="../ui/wizard.py" line="973"/>
         <source>Processing: {0}…</source>
         <translation>Zpracování: {0}…</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="976"/>
+        <location filename="../ui/wizard.py" line="980"/>
         <source>Cancelled</source>
         <translation>Zrušeno</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="981"/>
+        <location filename="../ui/wizard.py" line="985"/>
         <source>Processing failed: {0}</source>
         <translation>Zpracování selhalo: {0}</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="986"/>
+        <location filename="../ui/wizard.py" line="990"/>
         <source>Processed: {0}, {1}</source>
         <translation>Zpracováno: {0}, {1}</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="988"/>
-        <location filename="../ui/wizard.py" line="1355"/>
+        <location filename="../ui/wizard.py" line="992"/>
+        <location filename="../ui/wizard.py" line="1359"/>
         <source>Processing had already finished; the results were kept.</source>
         <translation>Zpracování už skončilo; výsledky zůstaly zachovány.</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="994"/>
+        <location filename="../ui/wizard.py" line="998"/>
         <source>Background noise: {0:.2f} → {1:.2f} ADU (ratio {2:.2f})</source>
         <translation>Šum pozadí: {0:.2f} → {1:.2f} ADU (poměr {2:.2f})</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="996"/>
+        <location filename="../ui/wizard.py" line="1000"/>
         <source>Saturated pixels: {0:.3f} %</source>
         <translation>Saturované pixely: {0:.3f} %</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="997"/>
+        <location filename="../ui/wizard.py" line="1001"/>
         <source>Frames used: {0} · max shift {1:.2f} px</source>
         <translation>Použité snímky: {0} · max. posun {1:.2f} px</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="1036"/>
+        <location filename="../ui/wizard.py" line="1040"/>
         <source>Camera options are not available yet.</source>
         <translation>Nastavení fotoaparátu zatím není k dispozici.</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="1041"/>
+        <location filename="../ui/wizard.py" line="1045"/>
         <source>{0} × {1} · {2}</source>
         <translation>{0} × {1} · {2}</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="1049"/>
+        <location filename="../ui/wizard.py" line="1053"/>
         <source>Step {0} of {1}</source>
         <translation>Krok {0} z {1}</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="1059"/>
+        <location filename="../ui/wizard.py" line="1063"/>
         <source>Finish</source>
         <translation>Dokončit</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="1119"/>
-        <location filename="../ui/wizard.py" line="1223"/>
+        <location filename="../ui/wizard.py" line="1123"/>
+        <location filename="../ui/wizard.py" line="1227"/>
         <source>Resume from frame {0}</source>
         <translation>Pokračovat od snímku {0}</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="1120"/>
-        <location filename="../ui/wizard.py" line="1225"/>
+        <location filename="../ui/wizard.py" line="1124"/>
+        <location filename="../ui/wizard.py" line="1229"/>
         <source>Use the {0} frames</source>
         <translation>Použít stávající snímky ({0})</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="1152"/>
+        <location filename="../ui/wizard.py" line="1156"/>
         <source>Connection to the camera lost.</source>
         <translation>Spojení s fotoaparátem bylo ztraceno.</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="1216"/>
+        <location filename="../ui/wizard.py" line="1220"/>
         <source>Series interrupted after {0} of {1} frames</source>
         <translation>Série přerušena po {0} z {1} snímků</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="1217"/>
+        <location filename="../ui/wizard.py" line="1221"/>
         <source>Dark frames interrupted after {0} of {1} frames</source>
         <translation>Tmavé snímky přerušeny po {0} z {1} snímků</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="1221"/>
+        <location filename="../ui/wizard.py" line="1225"/>
         <source>The camera disconnected.</source>
         <translation>Fotoaparát se odpojil.</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="1221"/>
+        <location filename="../ui/wizard.py" line="1225"/>
         <source>The camera reported an error.</source>
         <translation>Fotoaparát ohlásil chybu.</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="1222"/>
+        <location filename="../ui/wizard.py" line="1226"/>
         <source>{0} frames are downloaded and kept; exposure and focus are unchanged.</source>
         <translation>Stažené snímky ({0}) zůstávají zachovány; expozice a ostření se nezměnily.</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="1224"/>
+        <location filename="../ui/wizard.py" line="1228"/>
         <source>Start over</source>
         <translation>Začít znovu</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="1323"/>
+        <location filename="../ui/wizard.py" line="1327"/>
         <source>Frames and metadata.json stay in the gel folder (status: captured; processing pending). Running processing will be stopped. Cancel anyway?</source>
         <translation>Snímky a metadata.json zůstávají ve složce gelu (stav: zachyceno; zpracování čeká). Probíhající zpracování se zastaví. Přesto zrušit?</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="1326"/>
+        <location filename="../ui/wizard.py" line="1330"/>
         <source>Frames already taken stay in the gel folder, without metadata. Cancel anyway?</source>
         <translation>Již pořízené snímky zůstávají ve složce gelu, bez metadat. Přesto zrušit?</translation>
     </message>
     <message>
-        <location filename="../ui/wizard.py" line="1340"/>
+        <location filename="../ui/wizard.py" line="1344"/>
         <source>Cancelling…</source>
         <translation>Ruším…</translation>
     </message>
@@ -1036,22 +1036,22 @@
 <context>
     <name>LogDialog</name>
     <message>
-        <location filename="../ui/main_window.py" line="56"/>
+        <location filename="../ui/main_window.py" line="57"/>
         <source>Log</source>
         <translation>Záznam</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="63"/>
+        <location filename="../ui/main_window.py" line="64"/>
         <source>All</source>
         <translation>Vše</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="63"/>
+        <location filename="../ui/main_window.py" line="64"/>
         <source>Warnings</source>
         <translation>Varování</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="63"/>
+        <location filename="../ui/main_window.py" line="64"/>
         <source>Errors</source>
         <translation>Chyby</translation>
     </message>
@@ -1059,426 +1059,431 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../ui/main_window.py" line="149"/>
+        <location filename="../ui/main_window.py" line="150"/>
         <source>Looking for the camera…</source>
         <translation>Hledám fotoaparát…</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="162"/>
-        <location filename="../ui/main_window.py" line="504"/>
+        <location filename="../ui/main_window.py" line="163"/>
+        <location filename="../ui/main_window.py" line="514"/>
         <source>No camera</source>
         <translation>Žádný fotoaparát</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="170"/>
+        <location filename="../ui/main_window.py" line="171"/>
         <source>Light: {0}</source>
         <translation>Světlo: {0}</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="172"/>
+        <location filename="../ui/main_window.py" line="173"/>
         <source>New gel image…</source>
         <translation>Nový snímek gelu…</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="180"/>
+        <location filename="../ui/main_window.py" line="181"/>
         <source>Settings…</source>
         <translation>Nastavení…</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="189"/>
+        <location filename="../ui/main_window.py" line="190"/>
         <source>View</source>
         <translation>Zobrazení</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="190"/>
+        <location filename="../ui/main_window.py" line="191"/>
         <source>Grid</source>
         <translation>Mřížka</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="191"/>
+        <location filename="../ui/main_window.py" line="192"/>
         <source>Clipping</source>
         <translation>Přepaly</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="197"/>
+        <location filename="../ui/main_window.py" line="193"/>
+        <source>Histogram</source>
+        <translation>Histogram</translation>
+    </message>
+    <message>
+        <location filename="../ui/main_window.py" line="201"/>
         <source>Zoom</source>
         <translation>Zoom</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="201"/>
+        <location filename="../ui/main_window.py" line="205"/>
         <source>Zoom {0}×</source>
         <translation>Zoom {0}×</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="212"/>
-        <location filename="../ui/main_window.py" line="501"/>
+        <location filename="../ui/main_window.py" line="216"/>
+        <location filename="../ui/main_window.py" line="511"/>
         <source>Camera is not connected</source>
         <translation>Fotoaparát není připojen</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="233"/>
+        <location filename="../ui/main_window.py" line="237"/>
         <source>● Connection lost — reconnecting</source>
         <translation>● Spojení ztraceno — obnovuji</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="239"/>
+        <location filename="../ui/main_window.py" line="243"/>
         <source>ISO, shutter and aperture will be restored automatically.</source>
         <translation>ISO, čas závěrky a clona se obnoví automaticky.</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="241"/>
+        <location filename="../ui/main_window.py" line="245"/>
         <source>Reconnect now</source>
         <translation>Připojit hned</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="243"/>
+        <location filename="../ui/main_window.py" line="247"/>
         <source>Cancel</source>
         <translation>Zrušit</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="261"/>
+        <location filename="../ui/main_window.py" line="265"/>
         <source>No camera found</source>
         <translation>Fotoaparát nenalezen</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="270"/>
+        <location filename="../ui/main_window.py" line="274"/>
         <source>EOS Utility or another tethering app is not running</source>
         <translation>Neběží EOS Utility ani jiná aplikace pro ovládání fotoaparátu</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="271"/>
+        <location filename="../ui/main_window.py" line="275"/>
         <source>USB cable connected directly, not through a hub</source>
         <translation>Kabel USB je zapojen přímo, ne přes rozbočovač</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="272"/>
+        <location filename="../ui/main_window.py" line="276"/>
         <source>Camera switched on, mode M, AC adapter plugged in</source>
         <translation>Fotoaparát je zapnutý, v režimu M, síťový adaptér zapojen</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="276"/>
+        <location filename="../ui/main_window.py" line="280"/>
         <source>Try again</source>
         <translation>Zkusit znovu</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="279"/>
+        <location filename="../ui/main_window.py" line="283"/>
         <source>Open log</source>
         <translation>Otevřít záznam</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="292"/>
+        <location filename="../ui/main_window.py" line="296"/>
         <source>Display — preview only, result.tif and the RAW stay linear</source>
         <translation>Zobrazení — jen náhled, result.tif i RAW zůstávají lineární</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="298"/>
+        <location filename="../ui/main_window.py" line="302"/>
         <source>Auto stretch</source>
         <translation>Automatický kontrast</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="299"/>
+        <location filename="../ui/main_window.py" line="303"/>
         <source>Reset</source>
         <translation>Obnovit</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="300"/>
+        <location filename="../ui/main_window.py" line="304"/>
         <source>Invert</source>
         <translation>Invertovat</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="308"/>
+        <location filename="../ui/main_window.py" line="312"/>
         <source>Channel</source>
         <translation>Kanál</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="326"/>
+        <location filename="../ui/main_window.py" line="330"/>
         <source>Black</source>
         <translation>Černá</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="327"/>
+        <location filename="../ui/main_window.py" line="331"/>
         <source>White</source>
         <translation>Bílá</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="328"/>
+        <location filename="../ui/main_window.py" line="332"/>
         <source>Gamma</source>
         <translation>Gama</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="352"/>
+        <location filename="../ui/main_window.py" line="356"/>
         <source>Camera</source>
         <translation>Fotoaparát</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="356"/>
+        <location filename="../ui/main_window.py" line="360"/>
         <source>Model</source>
         <translation>Model</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="357"/>
+        <location filename="../ui/main_window.py" line="361"/>
         <source>Quality</source>
         <translation>Kvalita</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="360"/>
+        <location filename="../ui/main_window.py" line="364"/>
         <source>Lens</source>
         <translation>Objektiv</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="361"/>
+        <location filename="../ui/main_window.py" line="365"/>
         <source>Focal length</source>
         <translation>Ohnisková vzdálenost</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="365"/>
+        <location filename="../ui/main_window.py" line="369"/>
         <source>Battery</source>
         <translation>Baterie</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="371"/>
+        <location filename="../ui/main_window.py" line="375"/>
         <source>Focus</source>
         <translation>Ostření</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="376"/>
+        <location filename="../ui/main_window.py" line="380"/>
         <source>sharpness · variance of Laplacian</source>
         <translation>ostrost · rozptyl Laplaciánu</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="378"/>
+        <location filename="../ui/main_window.py" line="382"/>
         <source>Run autofocus</source>
         <translation>Spustit autofokus</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="383"/>
+        <location filename="../ui/main_window.py" line="387"/>
         <source>Focus nearer, large step</source>
         <translation>Zaostřit blíž, velký krok</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="384"/>
+        <location filename="../ui/main_window.py" line="388"/>
         <source>Focus nearer, medium step</source>
         <translation>Zaostřit blíž, střední krok</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="385"/>
+        <location filename="../ui/main_window.py" line="389"/>
         <source>Focus nearer, small step</source>
         <translation>Zaostřit blíž, malý krok</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="386"/>
+        <location filename="../ui/main_window.py" line="390"/>
         <source>Focus farther, small step</source>
         <translation>Zaostřit dál, malý krok</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="387"/>
+        <location filename="../ui/main_window.py" line="391"/>
         <source>Focus farther, medium step</source>
         <translation>Zaostřit dál, střední krok</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="388"/>
+        <location filename="../ui/main_window.py" line="392"/>
         <source>Focus farther, large step</source>
         <translation>Zaostřit dál, velký krok</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="392"/>
+        <location filename="../ui/main_window.py" line="396"/>
         <source>Fine steps (near ← → far)</source>
         <translation>Jemné kroky (blíž ← → dál)</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="396"/>
+        <location filename="../ui/main_window.py" line="400"/>
         <source>Focus under white light, then switch back to UV. The shutter never refocuses.</source>
         <translation>Ostřete při bílém světle a pak přepněte zpět na UV. Spoušť už nikdy neostří znovu.</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="399"/>
+        <location filename="../ui/main_window.py" line="402"/>
         <source>Exposure</source>
         <translation>Expozice</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="402"/>
+        <location filename="../ui/main_window.py" line="405"/>
         <source>ISO</source>
         <translation>ISO</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="403"/>
+        <location filename="../ui/main_window.py" line="406"/>
         <source>Shutter</source>
         <translation>Čas závěrky</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="404"/>
+        <location filename="../ui/main_window.py" line="407"/>
         <source>Aperture</source>
         <translation>Clona</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="407"/>
+        <location filename="../ui/main_window.py" line="410"/>
         <source>Values are read from the camera; only what it allows is offered.</source>
         <translation>Hodnoty se čtou z fotoaparátu; nabízí se jen to, co povolí.</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="413"/>
+        <location filename="../ui/main_window.py" line="416"/>
         <source>Single frame</source>
         <translation>Jeden snímek</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="414"/>
+        <location filename="../ui/main_window.py" line="417"/>
         <source>Capture frame</source>
         <translation>Pořídit snímek</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="419"/>
+        <location filename="../ui/main_window.py" line="422"/>
         <source>Brightest</source>
         <translation>Nejjasnější</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="420"/>
+        <location filename="../ui/main_window.py" line="423"/>
         <source>Saturated</source>
         <translation>Saturováno</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="424"/>
+        <location filename="../ui/main_window.py" line="427"/>
         <source>measured on RAW</source>
         <translation>změřeno na RAW</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="442"/>
-        <location filename="../ui/main_window.py" line="735"/>
+        <location filename="../ui/main_window.py" line="452"/>
+        <location filename="../ui/main_window.py" line="749"/>
         <source>Disconnected</source>
         <translation>Odpojeno</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="447"/>
+        <location filename="../ui/main_window.py" line="457"/>
         <source>Log</source>
         <translation>Záznam</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="479"/>
+        <location filename="../ui/main_window.py" line="489"/>
         <source>Connected: {0}</source>
         <translation>Připojeno: {0}</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="482"/>
+        <location filename="../ui/main_window.py" line="492"/>
         <source>Starting live view…</source>
         <translation>Spouštím živý náhled…</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="492"/>
+        <location filename="../ui/main_window.py" line="502"/>
         <source>Camera disconnected.</source>
         <translation>Fotoaparát odpojen.</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="493"/>
+        <location filename="../ui/main_window.py" line="503"/>
         <source>Disconnected.</source>
         <translation>Odpojeno.</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="518"/>
+        <location filename="../ui/main_window.py" line="528"/>
         <source>Connection lost.</source>
         <translation>Spojení ztraceno.</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="521"/>
+        <location filename="../ui/main_window.py" line="531"/>
         <source>Connection lost</source>
         <translation>Spojení ztraceno</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="529"/>
+        <location filename="../ui/main_window.py" line="539"/>
         <source>Last frame {0} s ago</source>
         <translation>Poslední snímek před {0} s</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="539"/>
+        <location filename="../ui/main_window.py" line="549"/>
         <source>Attempt {0}</source>
         <translation>Pokus {0}</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="555"/>
+        <location filename="../ui/main_window.py" line="565"/>
         <source>Reconnected: {0}</source>
         <translation>Znovu připojeno: {0}</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="595"/>
+        <location filename="../ui/main_window.py" line="605"/>
         <source>Not RAW — will be set on capture</source>
         <translation>Není RAW — nastaví se při snímání</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="598"/>
+        <location filename="../ui/main_window.py" line="608"/>
         <source>not reported</source>
         <translation>neuvedeno</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="600"/>
+        <location filename="../ui/main_window.py" line="610"/>
         <source>not reported by the camera</source>
         <translation>fotoaparát neuvádí</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="619"/>
+        <location filename="../ui/main_window.py" line="629"/>
         <source>Saved: {0}</source>
         <translation>Uloženo: {0}</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="625"/>
+        <location filename="../ui/main_window.py" line="635"/>
         <source>measuring…</source>
         <translation>měřím…</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="634"/>
+        <location filename="../ui/main_window.py" line="644"/>
         <source>{0:.2f} % — saturated</source>
         <translation>{0:.2f} % — saturováno</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="665"/>
+        <location filename="../ui/main_window.py" line="678"/>
         <source>The settings could not be saved: {0}</source>
         <translation>Nastavení se nepodařilo uložit: {0}</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="667"/>
+        <location filename="../ui/main_window.py" line="680"/>
         <source>Images are saved to {0}</source>
         <translation>Snímky se ukládají do {0}</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="704"/>
+        <location filename="../ui/main_window.py" line="717"/>
         <source>camera magnifier {0}× · </source>
         <translation>lupa fotoaparátu {0}× · </translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="705"/>
+        <location filename="../ui/main_window.py" line="718"/>
         <source>live view · {0} × {1} · {2:.0f} fps</source>
         <translation>živý náhled · {0} × {1} · {2:.0f} fps</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="730"/>
+        <location filename="../ui/main_window.py" line="744"/>
         <source>Reconnecting · attempt {0}</source>
         <translation>Obnovuji spojení · pokus {0}</translation>
     </message>
     <message>
         <location filename="../runtime.py" line="220"/>
-        <location filename="../ui/main_window.py" line="732"/>
+        <location filename="../ui/main_window.py" line="746"/>
         <source>Connected</source>
         <translation>Připojeno</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="734"/>
+        <location filename="../ui/main_window.py" line="748"/>
         <source>Disconnected · retrying every 5 s</source>
         <translation>Odpojeno · zkouším znovu každých 5 s</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="736"/>
+        <location filename="../ui/main_window.py" line="750"/>
         <source>· live view {0:.1f} fps</source>
         <translation>· živý náhled {0:.1f} fps</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="741"/>
+        <location filename="../ui/main_window.py" line="755"/>
         <source>White light</source>
         <translation>Bílé světlo</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="741"/>
+        <location filename="../ui/main_window.py" line="755"/>
         <source>UV 70 %</source>
         <translation>UV 70 %</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="741"/>
+        <location filename="../ui/main_window.py" line="755"/>
         <source>UV 100 %</source>
         <translation>UV 100 %</translation>
     </message>

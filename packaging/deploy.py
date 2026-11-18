@@ -40,7 +40,11 @@ def main() -> int:
         return 1
     target = args.to
     known = {"GelCam", "sample", "LAB-TEST-CHECKLIST.txt"}
-    if target.exists() and any(p.name not in known for p in target.iterdir()):
+
+    def ours(path: Path) -> bool:  # reports brought back from the lab PC (never touched here) are fine too
+        return path.name in known or path.name == "gelcam.log" or (path.name.startswith("bench-") and path.suffix == ".txt")
+
+    if target.exists() and any(not ours(p) for p in target.iterdir()):
         print(f"{target} holds other things; use an empty or new folder", file=sys.stderr)
         return 1
     target.mkdir(parents=True, exist_ok=True)
