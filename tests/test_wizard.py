@@ -354,3 +354,74 @@ def test_white_light_series_has_no_uv_level(env):
     meta = wiz._metadata()
     assert meta["uv_level"] is None
     assert json.loads(json.dumps(meta, default=str))["uv_level"] is None  # serialises as null
+
+
+def test_wizard_offers_only_the_magnifier_steps_of_the_camera(tmp_path):
+    app = QApplication.instance() or QApplication([])
+
+    class Five(MockCamera):
+        live_view_zooms = (1, 5)
+
+    cams = []
+    ctrl = CameraController(lambda: cams.append(Five(seed=1)) or cams[-1])
+    errors, zooms = [], []
+    ctrl.error.connect(errors.append)
+    orig = ctrl.set_zoom
+    ctrl.set_zoom = lambda z: (zooms.append(z), orig(z))[1]
+    ctrl.connect_camera()
+    assert _wait(app, lambda: bool(cams) and cams[0].is_connected)
+    ctrl.set_live_view(True)
+    assert _wait(app, lambda: ctrl.live)
+    ctrl.refresh_options()
+    assert _wait(app, lambda: ctrl.zooms == (1, 5))
+    wiz = GelWizard(ctrl, tmp_path, "white")
+    wiz.show()
+    wiz.btn_next.click()
+    wiz.btn_next.click()  # -> step 3 (focus)
+    assert not wiz.mag_btns[10].isVisible() and wiz.mag_btns[5].isVisible()
+    assert wiz.mag_btns[5].isChecked() and zooms == [5]
+    assert _wait(app, lambda: ctrl._camera is not None) and not errors
+    wiz.close()
+    ctrl.shutdown()
+
+
+def test_blur_warning_from_measured_sharpness(monkeypatch, env):  # monkeypatch first: undone after env teardown
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)  # closing with frames
+    app, _ctrl, _cam, wiz, _sent, _root = env
+    wiz.gel_name.setText("blur")
+    for _ in range(3):
+        wiz.btn_next.click()  # -> 4 test exposure
+    assert _wait(app, lambda: wiz.applied)
+    wiz.btn_test.click()
+    assert _wait(app, lambda: wiz.proposal_code is not None)
+    assert len(wiz.test_sharp) == 1  # measured on RAW together with the exposure
+    wiz.btn_next.click()
+    wiz.btn_next.click()  # -> 6
+    wiz.frames.setCurrentIndex(wiz.frames.findData(4))
+    wiz.btn_series.click()
+    assert _wait(app, lambda: wiz.series_done and len(wiz.light_sharp) == 4)
+    wiz.show()
+    wiz._refresh_focus_note()
+    assert wiz.focus_note.isHidden()  # same scene, same focus: no warning
+
+    ref = next(iter(wiz.test_sharp.values()))
+    for p in wiz.light_sharp:
+        wiz.light_sharp[p] = ref * 0.2  # the whole series is blurred
+    wiz._refresh_focus_note()
+    assert not wiz.focus_note.isHidden() and "much blurrier" in wiz.focus_note.text()
+
+    paths = list(wiz.light_sharp)
+    for p in paths:
+        wiz.light_sharp[p] = ref
+    wiz.light_sharp[paths[2]] = ref * 0.2  # a single blurred frame
+    wiz._refresh_focus_note()
+    assert "3" in wiz.focus_note.text() and "rest of the series" in wiz.focus_note.text()
+
+    for p in paths:
+        wiz.light_sharp[p] = ref
+    wiz.af_unlocked = True
+    wiz._refresh_focus_note()
+    assert "did not lock" in wiz.focus_note.text()
+    meta = wiz._metadata()
+    assert meta["focus"]["autofocus_locked"] is False
+    assert len(meta["focus"]["light_frame_sharpness"]) == 4 and len(meta["focus"]["test_frame_sharpness"]) == 1

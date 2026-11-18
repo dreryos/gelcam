@@ -46,6 +46,7 @@ class CameraController(QObject):
         self.lost = False
         self._live_before_loss = False
         self.lens = LensInfo()  # latest from refresh_options
+        self.zooms: tuple[int, ...] = (1, 5, 10)  # magnifier steps of the connected camera (refresh_options)
         self._closed = False
 
     # --- internal ---
@@ -161,7 +162,7 @@ class CameraController(QObject):
             except Exception:  # noqa: BLE001
                 status["lens"] = LensInfo()
             self.lens = status["lens"]
-            status["zooms"] = tuple(getattr(cam, "live_view_zooms", (1, 5, 10)))
+            status["zooms"] = self.zooms = tuple(getattr(cam, "live_view_zooms", (1, 5, 10)))
             self.status_ready.emit(status)
             return {p: (cam.allowed_values(p), int(cam.get(p))) for p in (Prop.ISO, Prop.TV, Prop.AV)}
 

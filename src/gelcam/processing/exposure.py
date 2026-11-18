@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from .channel import saturation_mask, select_channel
+from .focus import raw_sharpness
 from .raw_io import RawFrame
 
 
@@ -15,6 +16,7 @@ class ExposureMeasurement:
     brightest_adu: float  # above black level
     fraction: float  # brightest_adu / (white_level - black)
     saturated_fraction: float
+    sharpness: float | None = None  # `raw_sharpness` of the channel; compare only between frames of one scene
 
 
 def measure(frame: RawFrame, channel: str, percentile: float = 99.9) -> ExposureMeasurement:
@@ -26,6 +28,7 @@ def measure(frame: RawFrame, channel: str, percentile: float = 99.9) -> Exposure
         brightest_adu=brightest,
         fraction=brightest / span,
         saturated_fraction=float(saturation_mask(frame, channel).mean()),
+        sharpness=raw_sharpness(plane),
     )
 
 

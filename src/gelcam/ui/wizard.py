@@ -31,7 +31,7 @@ from ..acquisition.profiles import DEFAULT_PROFILES, DyeProfile
 from ..camera import FocusStep, Prop
 from ..camera.values import av_fnumber, av_label, iso_label, iso_value, tv_code_at_most, tv_label, tv_seconds
 from ..processing.exposure import ExposureMeasurement, propose_seconds
-from ..processing.focus import sharpness_rgb
+from ..processing.focus import FocusAssessment, assess_focus, sharpness_rgb
 from ..processing.pipeline import ProcessingCancelled, process_gel_folder
 from ..storage.gel_folder import create_gel_folder, write_metadata
 from . import theme
@@ -77,6 +77,9 @@ class GelWizard(QDialog):
         self.applied = False
         self.proposal_code: int | None = None
         self.test_frames: list[Path] = []
+        self.test_sharp: dict[Path, float] = {}  # raw_sharpness of the test frames
+        self.light_sharp: dict[Path, float] = {}  # raw_sharpness of the light frames
+        self.af_unlocked = False  # the last autofocus did not improve the sharpness
         self.light_frames: list[Path] = []
         self.dark_frames: list[Path] = []
         self.discarded: list[Path] = []
@@ -399,8 +402,15 @@ class GelWizard(QDialog):
                                                                  "the start of each session.")))
         col.addStretch()
         lay.addLayout(col, 2)
-        self._set_mag(10, send=False)
+        self._set_mag(max(self.ctrl.zooms), send=False)
         return w
+
+    def _apply_zooms(self) -> None:
+        """Offer only the magnifier steps the camera really has and start at the strongest one."""
+        zooms = self.ctrl.zooms
+        for z, b in self.mag_btns.items():
+            b.setVisible(z in zooms)
+        self._set_mag(max(zooms))
 
     def _set_mag(self, z: int, send: bool = True) -> None:
         self.mag_btns[z].setChecked(True)
@@ -422,7 +432,8 @@ class GelWizard(QDialog):
         self.btn_af.setEnabled(True)
         before = self.sharp_before or 0.0
         self.af_note.hide()
-        if value < before * AF_MIN_GAIN:
+        self.af_unlocked = value < before * AF_MIN_GAIN
+        if self.af_unlocked:
             self.af_note.setText(self.tr(
                 "Autofocus did not lock — sharpness stayed at {0:.1f}. It can fail when the lens is far out of "
                 "focus or the scene is dim, so the sensor finds no contrast.").format(before) + "\n" + self.tr(
@@ -693,6 +704,9 @@ class GelWizard(QDialog):
         self.proc_stats = QLabel()
         self.proc_stats.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         lay.addWidget(self.proc_stats)
+        self.focus_note = Note("", "error")
+        self.focus_note.hide()
+        lay.addWidget(self.focus_note)
         lay.addWidget(Note(self.tr("Process subtracts the dark frames, stacks the light frames and saves "
                                    "result.tif (linear, 16-bit) and preview.png in the gel folder. The RAW "
                                    "frames are never modified; the flat field is skipped. Without Process, "
@@ -710,6 +724,31 @@ class GelWizard(QDialog):
             self.tr("Exposure: {0}").format(self._exposure_text()),
             self.tr("Flat field: skipped (no library in prototype)"),
         ]))
+        self._refresh_focus_note()
+
+    def _focus_assessment(self) -> FocusAssessment:
+        """The series against the last test frame (taken after focusing), measured on RAW."""
+        ref = next((self.test_sharp[p] for p in reversed(self.test_frames) if p in self.test_sharp), None)
+        series = [self.light_sharp[p] for p in self.light_frames if p in self.light_sharp]
+        return assess_focus(ref, series)
+
+    def _refresh_focus_note(self) -> None:
+        a = self._focus_assessment()
+        lines: list[str] = []
+        if a.series_blurred and a.series_vs_reference is not None:
+            lines.append(self.tr(
+                "The series is much blurrier than the test frame ({0:.0f} % of its sharpness). The focus may have "
+                "drifted: check the focus (step 3) and shoot the series again.").format(100 * a.series_vs_reference))
+        if a.blurry_frames and a.worst_vs_series is not None:
+            lines.append(self.tr(
+                "Frame(s) {0} are blurrier than the rest of the series (the worst has {1:.0f} % of the median "
+                "sharpness): the camera or the gel may have moved.").format(
+                    ", ".join(str(i) for i in a.blurry_frames), 100 * a.worst_vs_series))
+        if self.af_unlocked:
+            lines.append(self.tr(
+                "Autofocus did not lock at step 3 and was not repeated successfully. Check that the series is sharp."))
+        self.focus_note.setText("\n".join(lines))
+        self.focus_note.setVisible(bool(lines))
 
     def _process(self) -> None:
         assert self.folder is not None
@@ -805,7 +844,7 @@ class GelWizard(QDialog):
         elif i >= 3 and self.ctrl.live:
             self.ctrl.set_live_view(False)
         if i == 2 and old != 2:
-            self._set_mag(10)
+            self._apply_zooms()
         self._timer.start() if live else self._timer.stop()
         self.stack.setCurrentIndex(i)
         if i == 0:
@@ -907,8 +946,12 @@ class GelWizard(QDialog):
     def _on_measured(self, path: Any, m: ExposureMeasurement) -> None:
         path = Path(path)
         if path in self.test_frames:
+            if m.sharpness is not None:
+                self.test_sharp[path] = m.sharpness
             self._show_measurement(m)
         elif path in self.light_frames or (self._batch and path in self._batch["got"]):
+            if m.sharpness is not None:
+                self.light_sharp[path] = m.sharpness
             sat = m.saturated_fraction
             self.st_last_sat.set_value(f"{sat * 100:.2f} %", theme.BAD if sat > SATURATION_LIMIT else theme.OK)
 
@@ -1067,7 +1110,12 @@ class GelWizard(QDialog):
                 "lights_off_and_cabinet_closed_and_eyepiece_covered_for_darks": all(
                     cb.isChecked() for cb in self.dark_checks),
             },
-            "focus": {"sharpness_before_af": self.sharp_before, "sharpness_after_af": self.sharp_after},
+            "focus": {
+                "sharpness_before_af": self.sharp_before, "sharpness_after_af": self.sharp_after,
+                "autofocus_locked": not self.af_unlocked,
+                "test_frame_sharpness": {p.name: v for p, v in self.test_sharp.items()},
+                "light_frame_sharpness": {p.name: v for p, v in self.light_sharp.items()},
+            },
             "processing": [],
             "status": STATUS,
         }
