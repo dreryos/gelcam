@@ -26,8 +26,10 @@ Before taking images
 
 Language
 --------
-English. A Czech translation is used when it is installed (translations folder) and the system language
-is Czech; force a language with   GelCam.exe --lang cs   or   --lang en   (or the GELCAM_LANG variable).
+The interface is English. A Czech translation is included: it is used automatically when Windows runs in
+Czech. To start in Czech on any PC, double-click GelCam-Czech.cmd (or make a shortcut to it). From a command
+line:   GelCam.exe --lang cs   or   --lang en   (also the GELCAM_LANG variable). Technical messages that come
+from the camera driver stay in English.
 
 Where things are
 ----------------

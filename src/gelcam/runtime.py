@@ -84,9 +84,9 @@ def install_excepthook(show: Callable[[str, str], None] | None = None) -> None:
 
 # ----------------------------------------------------------------------------------------- language
 def translations_dir() -> Path:
-    """Folder with `gelcam_<lang>.qm` files (next to the exe in a packaged build)."""
+    """Folder with `gelcam_<lang>.qm` files (the bundled data folder, `_internal`, in a packaged build)."""
     if is_frozen():
-        return app_dir() / "translations"
+        return Path(getattr(sys, "_MEIPASS", app_dir())) / "translations"
     return Path(__file__).resolve().parent / "translations"
 
 
@@ -105,7 +105,7 @@ def install_translator(app: object, lang: str) -> bool:
     """Install the Qt translation for `lang`; English is the source language and needs none."""
     if lang == "en":
         return False
-    from PySide6.QtCore import QTranslator
+    from PySide6.QtCore import QLibraryInfo, QTranslator
 
     path = translations_dir() / f"gelcam_{lang}.qm"
     translator = QTranslator(app)  # type: ignore[arg-type]
@@ -113,7 +113,18 @@ def install_translator(app: object, lang: str) -> bool:
         logging.getLogger("gelcam").warning("No translation for %r (%s); using English.", lang, path)
         return False
     app.installTranslator(translator)  # type: ignore[attr-defined]
-    app._gelcam_translator = translator  # type: ignore[attr-defined]  # keep it alive
+    keep = [translator]
+    # Qt's own texts (the Yes / No / OK buttons of message boxes, ...)
+    import PySide6
+
+    base = QTranslator(app)  # type: ignore[arg-type]
+    for folder in (QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath),
+                   str(Path(PySide6.__file__).resolve().parent / "translations")):
+        if base.load(f"qtbase_{lang}", folder):
+            app.installTranslator(base)  # type: ignore[attr-defined]
+            keep.append(base)
+            break
+    app._gelcam_translators = keep  # type: ignore[attr-defined]  # keep them alive
     return True
 
 
@@ -199,7 +210,19 @@ def selftest(check_camera: bool = False, out: Callable[[str], None] = print) -> 
         Edsdk()
         return f"loaded from {default_vendor_dir()}"
 
+    def czech() -> str:
+        from PySide6.QtCore import QTranslator
+
+        path = translations_dir() / "gelcam_cs.qm"
+        if not path.exists():
+            raise FileNotFoundError(f"{path} not found (the interface stays English)")
+        tr = QTranslator()
+        if not tr.load(str(path)) or tr.translate("MainWindow", "Connected") != "Připojeno":
+            raise RuntimeError(f"{path} cannot be loaded")
+        return f"loaded from {path}"
+
     step("libraries", libs)
+    step("Czech translation", czech, required=False)
     step("TIFF / PNG writing", tiff_png)
     step("alignment (OpenCV)", phase)
     step("main window (simulation)", window)

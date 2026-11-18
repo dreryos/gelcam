@@ -516,8 +516,17 @@ Synthetic gel: background + Gaussian bands with known intensity + Poisson noise 
 - **Start-up and memory** (dev PC, windowed, `--mock`): window up in ~2 s, ~96 MB resident. The lab PC (2 GB, dual core) still has to be measured with `tools/bench.py`.
 - **`GelCam-console.exe --selftest [--camera]`** checks libraries (numpy, OpenCV, rawpy, tifffile, Pillow), TIFF/PNG writing, phase correlation, a window over the simulated camera, the EDSDK DLL and, with `--camera`, a real connection. Verified from the package with the real 100D: all seven checks OK.
 - **Logging and crashes:** a rotating log in `%APPDATA%\GelCam\gelcam.log` and an exception hook that logs uncaught errors and shows a dialog with the log path (the windowed exe has no console).
-- **Language:** English is the source language. `--lang cs`, `GELCAM_LANG` or a Czech system language load `translations/gelcam_cs.qm` if it exists; without it the app stays English. The Czech translation itself is not written yet.
+- **Language:** English is the source language, Czech is an optional translation (see "Czech translation" below). The package ships `GelCam-Czech.cmd` (starts `GelCam.exe --lang cs`).
 - **Not done / not verified:** a clean Windows 10 PC without administrator rights (only a stripped environment on this PC was tested), AppLocker / SmartScreen behaviour, code signing, and whether Canon's terms allow handing the EDSDK DLLs to other PCs (to be checked in the Canon Developer Programme terms; `--no-edsdk` builds without them).
+
+### Czech translation (18 Nov 2026)
+
+- **Workflow:** `uv run python tools/translations.py update | check | compile`. `src/gelcam/translations/gelcam_cs.ts` (committed) is the source of truth, the `.qm` is generated (not committed; the package build compiles it and refuses to build when a text is untranslated or a `{placeholder}` differs). English stays the source language, so a new text needs `update` and then a Czech sentence in the `.ts` file; `tests/test_translations.py` fails when the file is out of step with the code.
+- **Coverage:** 226 texts (main window, wizard, controller messages, log window), all translated. Qt's own texts (Yes / No buttons) come from Qt's `qtbase_cs.qm`, which the package keeps (all other Qt languages are removed from the package). Texts that were passed to `tr()` through a variable (the three lights, the filter names, the pipeline progress messages) were changed to literal `tr()` calls so that `lupdate` can find them.
+- **Not translated:** technical messages produced below the UI layer (camera driver errors such as "Camera not found...", the log file, the pipeline's English progress identifiers that are mapped to translations only in the wizard) and the application name.
+- **Selection:** `--lang cs`, the `GELCAM_LANG` variable, or the Czech Windows language; otherwise English. Terminology: darky = "Tmavé snímky (darky)", live view = "živý náhled", flat field and master flat stay as they are in the lab jargon, "Clipping" = "Přepaly".
+- **Checked:** the main window and wizard rendered in Czech (diacritics, layout without clipping) and, in the package, `GelCam-console.exe --selftest` reports the translation loaded and `GelCam.exe --lang cs` starts without a warning in the log. A native Czech reader should still go through the wording.
+- **Useful trick:** `QT_QPA_FONTDIR=C:/Windows/Fonts` makes Qt's offscreen platform render real text, so offscreen screenshots of the windows are readable on Windows (without it they show boxes).
 
 ### Performance on the target PC (measured 10 Nov 2026)
 

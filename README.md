@@ -114,6 +114,13 @@ is the short operator guide. The Canon EDSDK DLLs are copied from `vendor/edsdk/
 package: check the Canon Developer Programme terms before giving the package to others (or build with
 `--no-edsdk` and copy the DLLs on each PC). The log file and settings live in `%APPDATA%\GelCam`.
 
+## Languages
+
+English is the source language. A Czech translation is included (`src/gelcam/translations/gelcam_cs.ts`): it is used
+when Windows runs in Czech, with `--lang cs` or `GELCAM_LANG=cs`, or via `GelCam-Czech.cmd` in the package.
+After changing a `tr()` text run `uv run python tools/translations.py update`, translate the new entries in the
+`.ts` file and run `... check`.
+
 ## Documentation
 
 - [docs/GELCAM_PLAN.md](docs/GELCAM_PLAN.md) — plan, architecture, measured sensor data and the

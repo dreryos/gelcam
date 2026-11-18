@@ -86,7 +86,8 @@ def test_frozen_paths(monkeypatch, tmp_path):
     monkeypatch.setattr(sys, "frozen", True, raising=False)
     monkeypatch.setattr(sys, "executable", str(exe))
     assert runtime.is_frozen() and runtime.app_dir() == exe.parent.resolve()
-    assert runtime.translations_dir() == exe.parent.resolve() / "translations"
+    monkeypatch.setattr(sys, "_MEIPASS", str(exe.parent / "_internal"), raising=False)  # PyInstaller's data folder
+    assert runtime.translations_dir() == exe.parent / "_internal" / "translations"
 
 
 def test_selftest_passes_without_a_camera():

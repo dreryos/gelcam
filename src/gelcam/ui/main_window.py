@@ -42,7 +42,6 @@ from .preview import apply_display, auto_levels, clipped_mask, histogram, overla
 from .widgets import Card, HistogramView, Note, PreviewView, StatValue
 
 _LABELS = {Prop.ISO: values.iso_label, Prop.TV: values.tv_label, Prop.AV: values.av_label}
-_LIGHTS = (("white", "White light"), ("uv70", "UV 70 %"), ("uv100", "UV 100 %"))
 _CHANNELS = "RGB"
 _STATS_EVERY = 3  # histogram and sharpness only on every 3rd frame (GELCAM_PLAN.md, ch. 8)
 _CHIP = (f"background: {theme.PANEL}; border: 1px solid {theme.LINE}; border-radius: 12px;"
@@ -166,8 +165,8 @@ class MainWindow(QMainWindow):
             chip.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.light_combo = QComboBox()
         self.light_combo.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        for key, label in _LIGHTS:
-            self.light_combo.addItem(self.tr("Light: {0}").format(self.tr(label)), key)
+        for key, label in self._light_labels().items():
+            self.light_combo.addItem(self.tr("Light: {0}").format(label), key)
         self.light_combo.currentIndexChanged.connect(self._on_light)
         self.btn_new = QPushButton(self.tr("New gel image…"))
         self.btn_new.setProperty("primary", True)
@@ -718,8 +717,11 @@ class MainWindow(QMainWindow):
             self.status_conn.setText(self.tr("Disconnected · retrying every 5 s") if self._auto_retry
                                      else self.tr("Disconnected"))
         self.status_fps.setText(self.tr("· live view {0:.1f} fps").format(self._fps()) if self._connected else "")
-        label = dict(_LIGHTS)[self.light]
-        self.status_light.setText("· " + self.tr(label))
+        self.status_light.setText("· " + self._light_labels()[self.light])
+
+    def _light_labels(self) -> dict[str, str]:
+        """The three lights of the cabinet, translated (each with a literal text, so lupdate finds it)."""
+        return {"white": self.tr("White light"), "uv70": self.tr("UV 70 %"), "uv100": self.tr("UV 100 %")}
 
     def _set_enabled(self, on: bool) -> None:
         for w in [self.btn_new, self.btn_capture, self.btn_af, *self.focus_btns.values(),

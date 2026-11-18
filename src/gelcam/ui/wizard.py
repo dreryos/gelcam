@@ -276,8 +276,9 @@ class GelWizard(QDialog):
 
     def _profile_changed(self) -> None:
         p = self.profile
+        filters = {"orange": self.tr("orange"), "amber": self.tr("amber")}
         self.profile_hint.setText(self.tr("Channel {0}  ·  {1} filter  ·  default {2:g} s, ISO {3}, f/{4:g}").format(
-            p.channel, p.emission_filter, p.seconds, p.iso, p.aperture))
+            p.channel, filters.get(p.emission_filter, p.emission_filter), p.seconds, p.iso, p.aperture))
         self.applied = False  # exposure is derived from the profile
         if hasattr(self, "frames") and not self.light_frames:
             self.frames.setCurrentIndex(max(self.frames.findData(p.frames), 0))
@@ -783,9 +784,23 @@ class GelWizard(QDialog):
         except RuntimeError:  # dialog already destroyed
             pass
 
+    def _progress_text(self, msg: str) -> str:
+        """Translated text of a pipeline progress message (the pipeline itself reports English)."""
+        known = {
+            "Reading light frames": self.tr("Reading light frames"),
+            "Reading dark frames": self.tr("Reading dark frames"),
+            "Building master flat": self.tr("Building master flat"),
+            "Calibrating": self.tr("Calibrating"),
+            "Aligning": self.tr("Aligning"),
+            "Stacking": self.tr("Stacking"),
+            "Writing result": self.tr("Writing result"),
+            "Done": self.tr("Done"),
+        }
+        return known.get(msg, msg)
+
     def _on_proc_progress(self, msg: str) -> None:
         if not self._closed:
-            self.proc_label.setText(self.tr("Processing: {0}…").format(msg))
+            self.proc_label.setText(self.tr("Processing: {0}…").format(self._progress_text(msg)))
 
     def _on_proc_done(self, out: Any) -> None:
         if self._closed:

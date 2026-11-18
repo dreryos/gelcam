@@ -26,6 +26,8 @@ from gelcam import __version__  # noqa: E402
 #: Files GelCam never uses (checked by the self-test after trimming): video codecs of OpenCV, the
 #: software OpenGL fallback of Qt (only QtQuick / OpenGL widgets need it) and AVIF support of Pillow.
 UNUSED = ("opencv_videoio_ffmpeg*.dll", "opengl32sw.dll", "_avif*.pyd")
+#: Qt ships its own texts in ~90 languages; only these are kept.
+KEEP_QT_LANGUAGES = ("cs", "en")
 
 
 def trim(out: Path) -> float:
@@ -35,6 +37,10 @@ def trim(out: Path) -> float:
         for f in out.rglob(pattern):
             freed += f.stat().st_size / 1e6
             f.unlink()
+    for qm in out.rglob("PySide6/translations/*.qm"):
+        if qm.stem.rsplit("_", 1)[-1] not in KEEP_QT_LANGUAGES:
+            freed += qm.stat().st_size / 1e6
+            qm.unlink()
     return freed
 
 
@@ -50,6 +56,15 @@ def main() -> int:
 
     import PyInstaller.__main__ as pyi
 
+    sys.path.insert(0, str(ROOT / "tools"))
+    import translations
+
+    issues = [p for lang in translations.LANGUAGES for p in translations.problems(translations.ts_path(lang))]
+    if issues:
+        print("Translation problems (run tools/translations.py check):", *issues[:5], sep="\n  ", file=sys.stderr)
+        return 1
+    print("compiled translations:", ", ".join(p.name for p in translations.compile_all()))
+
     dist, work = ROOT / "dist", ROOT / "build" / "pyinstaller"
     out = dist / "GelCam"
     if out.exists():
@@ -60,6 +75,7 @@ def main() -> int:
         return 1
 
     print(f"trimmed unused files: {trim(out):.0f} MB")
+    (out / "GelCam-Czech.cmd").write_bytes(b'@echo off\r\nstart "" "%~dp0GelCam.exe" --lang cs\r\n')
     dll_src = ROOT / "vendor" / "edsdk" / "Dll"
     if args.no_edsdk:
         print("EDSDK DLLs: not included (--no-edsdk)")

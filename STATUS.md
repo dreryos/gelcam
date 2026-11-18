@@ -109,7 +109,7 @@ Built over MockCamera, verified offscreen only (not yet on Windows with the 100D
       make the wizard's zoom check automatic (compare with the flat's focal length).
 - [x] PyInstaller onedir package (`packaging/build.py`, 233 MB / 92 MB zip, selftest `GelCam-console.exe --selftest --camera` passes with the real 100D, VC++ runtime bundled) (18 Nov).
 - [ ] Test the package on a clean Windows 10 PC / account without admin rights; check AppLocker/SmartScreen; confirm the Canon licence allows shipping the EDSDK DLLs.
-- [ ] Czech translation (`translations/gelcam_cs.ts/.qm`): the loader exists, the translation does not.
+- [x] Czech translation: 226 texts, `tools/translations.py`, loaded by `--lang cs` / Czech Windows / `GelCam-Czech.cmd` (18 Nov). A native Czech reader should review the wording.
 - [ ] Final UI check on Windows (fonts, DPI); week of real gels without blocking error.
 
 ## Open questions (plan ch. 11)
