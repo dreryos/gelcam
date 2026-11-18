@@ -17,6 +17,7 @@ class ExposureMeasurement:
     fraction: float  # brightest_adu / (white_level - black)
     saturated_fraction: float
     sharpness: float | None = None  # `raw_sharpness` of the channel; compare only between frames of one scene
+    median_adu: float | None = None  # median above black: the background of a gel (UV level cross-check)
 
 
 def measure(frame: RawFrame, channel: str, percentile: float = 99.9) -> ExposureMeasurement:
@@ -29,6 +30,7 @@ def measure(frame: RawFrame, channel: str, percentile: float = 99.9) -> Exposure
         fraction=brightest / span,
         saturated_fraction=float(saturation_mask(frame, channel).mean()),
         sharpness=raw_sharpness(plane),
+        median_adu=float(np.median(plane)),
     )
 
 

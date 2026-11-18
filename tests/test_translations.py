@@ -78,7 +78,7 @@ def test_main_window_and_wizard_are_shown_in_czech(czech):
     assert win.btn_af.text() == "Spustit autofokus"
     assert win.light_combo.itemText(0) == "Světlo: Bílé světlo"  # a text that goes through a variable
     assert win.btn_capture.text() == "Pořídit snímek"
-    wiz = GelWizard(ctrl, Path(os.environ.get("TEMP", ".")), "white")
+    wiz = GelWizard(ctrl, Path(os.environ.get("TEMP", ".")), "white", flat_library=Path(os.environ.get("TEMP", ".")) / "gelcam-no-flats")
     assert wiz.btn_af.text() == "Spustit autofokus"
     assert "filtr: oranžový" in wiz.profile_hint.text()  # profile filter name through a mapping
     assert wiz._progress_text("Stacking") == "Slučuji snímky"

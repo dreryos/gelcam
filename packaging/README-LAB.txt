@@ -24,6 +24,16 @@ Before taking images
 - Dark frames: lights off, cabinet closed, eyepiece covered.
 - The camera is set to RAW automatically before capture.
 
+Flat field (uneven illumination)
+--------------------------------
+Step 5 of the wizard can divide out a flat field. A flat belongs to one arrangement: the same UV level (70 % and
+100 % are two different flats), aperture, lens and zoom position. Take it with "Take new flat..." in step 5:
+put a uniformly fluorescing target (best: a blank gel with the same dye and thickness) where the gel goes, switch
+on the UV level you will use, find the exposure with the test frame (centre at 50-80 %, nothing saturated), take
+16 frames, then switch all light off and take the 16 dark frames. Repeat it about once a month; the wizard
+warns when a flat is older than 30 days or does not fit the series. One set takes about 600 MB in
+Documents\GelCam\calibration\flats.
+
 Language
 --------
 The interface is English. A Czech translation is included: it is used automatically when Windows runs in

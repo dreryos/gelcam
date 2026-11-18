@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
 from ..acquisition.profiles import DEFAULT_PROFILES, DyeProfile
 from ..camera import FocusStep, Prop
 from ..camera.values import av_fnumber, av_label, iso_label, iso_value, tv_code_at_most, tv_label, tv_seconds
+from ..storage import flat_library as flatlib
 from ..processing.exposure import ExposureMeasurement, propose_seconds
 from ..processing.focus import FocusAssessment, assess_focus, sharpness_rgb
 from ..processing.pipeline import ProcessingCancelled, process_gel_folder
@@ -63,10 +64,13 @@ class GelWizard(QDialog):
     _proc_done = Signal(object)  # PipelineResult or an Exception
 
     def __init__(self, controller: CameraController, out_root: Path, light: str,
-                 parent: QWidget | None = None) -> None:
+                 parent: QWidget | None = None, flat_library: Path | None = None) -> None:
         super().__init__(parent)
         self.ctrl = controller
         self.out_root = out_root
+        self.flat_library = flat_library or flatlib.default_library_dir()
+        self.flats: list[flatlib.FlatSet] = []  # the library, newest first
+        self.uv_check: flatlib.UvCheck | None = None
         self.setWindowTitle(self.tr("New gel image"))
         self.resize(960, 640)
 
@@ -481,6 +485,9 @@ class GelWizard(QDialog):
         self.sat_note = Note("", "error")
         self.sat_note.hide()
         lay.addWidget(self.sat_note)
+        self.uv_note = Note("", "error")
+        self.uv_note.hide()
+        lay.addWidget(self.uv_note)
         lay.addWidget(Note(self.tr("Exposure is not extended beyond 30 s — take more frames instead.")))
         lay.addStretch()
         return w
@@ -535,6 +542,7 @@ class GelWizard(QDialog):
                     m.saturated_fraction * 100, m.brightest_adu) + "\n" + self.tr(
                 "Shorten the exposure to {0:g} s, or continue if only the faint bands matter.").format(new or cur))
         self.sat_note.setVisible(saturated)
+        self._check_uv(m)
         self.btn_test.setEnabled(True)
 
     def _apply_proposal(self) -> None:
@@ -571,16 +579,173 @@ class GelWizard(QDialog):
         card.body.addLayout(row)
         lay.addWidget(card)
         card = Card(self.tr("Flat field"))
-        card.body.addWidget(QLabel(self.tr("No flat-field library exists yet in the prototype.")))
-        hint = QLabel(self.tr("The flat correction will be skipped and recorded as skipped in metadata.json."))
-        hint.setProperty("role", "dim")
-        hint.setWordWrap(True)
-        card.body.addWidget(hint)
+        self.flat_group = QButtonGroup(self)
+        self.flat_none = QRadioButton(self.tr("No flat field"))
+        self.flat_stored = QRadioButton(self.tr("Use stored"))
+        self.flat_none.setChecked(True)
+        for b in (self.flat_none, self.flat_stored):
+            self.flat_group.addButton(b)
+            b.toggled.connect(self._flat_changed)
+        row = QHBoxLayout()
+        row.addWidget(self.flat_none)
+        row.addWidget(self.flat_stored)
+        row.addStretch()
+        card.body.addLayout(row)
+        self.flat_combo = QComboBox()
+        self.flat_combo.currentIndexChanged.connect(self._flat_changed)
+        card.body.addWidget(self.flat_combo)
+        self.flat_hint = QLabel()
+        self.flat_hint.setProperty("role", "dim")
+        self.flat_hint.setWordWrap(True)
+        card.body.addWidget(self.flat_hint)
+        self.flat_note = Note("", "error")
+        self.flat_note.hide()
+        card.body.addWidget(self.flat_note)
+        row = QHBoxLayout()
+        self.btn_new_flat = self._btn(self.tr("Take new flat…"), slot=self._new_flat)
+        row.addWidget(self.btn_new_flat)
+        row.addStretch()
+        card.body.addLayout(row)
         lay.addWidget(card)
         lay.addWidget(Note(self.tr("Darks are taken right after the series, not from a library: hot pixels "
                                    "depend on sensor temperature, and after a series the sensor is warmer.")))
         lay.addStretch()
         return w
+
+    # --- flat field (library)
+    def _series_light(self) -> str:
+        """The light the series is shot under, as the library names it ("uv70", "uv100" or "white")."""
+        level = self.uv_level
+        return "white" if level is None else f"uv{level}"
+
+    def _arrangement(self) -> flatlib.Arrangement:
+        aperture = av_fnumber(self.codes[Prop.AV]) if Prop.AV in self.codes else 0.0
+        return flatlib.Arrangement(self._series_light(), aperture, self.ctrl.lens.name)
+
+    @property
+    def selected_flat(self) -> flatlib.FlatSet | None:
+        if not self.flat_stored.isChecked():
+            return None
+        return self.flat_combo.currentData()
+
+    def _refresh_flats(self, select: flatlib.FlatSet | None = None) -> None:
+        """Reads the library and offers its flats, best match first; preselects a matching one."""
+        self.flats = flatlib.list_flats(self.flat_library)
+        rated = flatlib.ranked(self.flats, self._arrangement())
+        self.flat_combo.blockSignals(True)
+        self.flat_combo.clear()
+        names = {"white": self.tr("White light"), "uv70": self.tr("UV 70 %"), "uv100": self.tr("UV 100 %")}
+        for flat, a in rated:
+            self.flat_combo.addItem(self.tr("{0} · {1} · {2:g} s · {3} d old").format(
+                flat.created.strftime("%Y-%m-%d %H:%M"), names.get(flat.light, flat.light), flat.seconds,
+                a.age_days), flat)
+        if select is not None:
+            for i in range(self.flat_combo.count()):
+                if self.flat_combo.itemData(i).id == select.id:
+                    self.flat_combo.setCurrentIndex(i)
+        self.flat_combo.blockSignals(False)
+        self.flat_stored.setEnabled(bool(rated))
+        self.flat_combo.setEnabled(bool(rated))
+        if select is not None:
+            self.flat_stored.setChecked(True)
+        elif not self.flat_stored.isChecked() and rated and rated[0][1].status == "ok":
+            self.flat_stored.setChecked(True)  # a matching flat exists: use it unless the operator says otherwise
+        elif self.flat_stored.isChecked() and not rated:
+            self.flat_none.setChecked(True)
+        self._flat_changed()
+
+    def _reason_text(self, code: str) -> str:
+        return {
+            "light": self.tr("taken under another light than this series"),
+            "aperture": self.tr("taken at another aperture"),
+            "lens": self.tr("taken with another lens"),
+            "incomplete": self.tr("the set is incomplete"),
+            "files_missing": self.tr("frames of the set are missing from the library"),
+            "old": self.tr("older than 30 days"),
+            "zoom_unconfirmed": self.tr("the zoom position was not confirmed when it was taken"),
+            "saturated": self.tr("part of it was saturated"),
+        }.get(code, code)
+
+    def _flat_changed(self, *_args: object) -> None:
+        flat = self.selected_flat
+        self.flat_combo.setVisible(self.flat_combo.count() > 0)
+        if not self.flats:
+            self.flat_hint.setText(self.tr("The library has no flat field yet. Take one for this UV level, "
+                                           "or continue without a flat field."))
+            self.flat_note.hide()
+            return
+        if flat is None:
+            self.flat_hint.setText(self.tr("The flat correction will be skipped and recorded as skipped in "
+                                           "metadata.json."))
+            self.flat_note.hide()
+            return
+        a = flatlib.assess(flat, self._arrangement())
+        self.flat_hint.setText(self.tr("{0} · centre {1:.0f} ADU · darkest corner {2:.0f} % of the centre · {3} frames + "
+                                       "{4} darks").format(flat.target or "-", flat.centre_adu,
+                                                           100 * flat.corner_ratio, len(flat.flats), len(flat.darks)))
+        if a.reasons:
+            kind = self.tr("This flat does not apply to this series") if a.status == "mismatch" else self.tr(
+                "Check this flat")
+            self.flat_note.setText(kind + ": " + "; ".join(self._reason_text(r) for r in a.reasons) + ".")
+        self.flat_note.setVisible(bool(a.reasons))
+
+    def _new_flat(self) -> None:
+        from .flat_dialog import FlatDialog
+
+        arr = self._arrangement()
+        dlg = FlatDialog(self.ctrl, self.flat_library, channel=self.profile.channel, light=arr.light,
+                         opts=self.opts, codes=self.codes, lens=self.ctrl.lens.name,
+                         camera=self.ctrl.camera_model, parent=self)
+        dlg.exec()
+        for prop, code in self.codes.items():  # the flat was taken at its own exposure: restore the series values
+            self.ctrl.set_value(prop, code)
+        self._refresh_flats(select=dlg.flat_set)
+
+    def _flat_summary(self) -> str:
+        flat = self.selected_flat
+        if flat is None:
+            return self.tr("Flat field: none")
+        return self.tr("Flat field: {0} ({1} d old)").format(flat.id, flatlib.assess(flat, self._arrangement()).age_days)
+
+    def _flat_metadata(self) -> dict[str, Any]:
+        """`flat` for humans, `flat_frames` / `flat_dark_frames` for the pipeline (absolute library paths)."""
+        flat = self.selected_flat
+        if flat is None:
+            return {"flat": "skipped (no flat field selected)"}
+        a = flatlib.assess(flat, self._arrangement())
+        return {
+            "flat": {"id": flat.id, "path": str(flat.path), "light": flat.light, "created": flat.created.isoformat(
+                timespec="seconds"), "seconds": flat.seconds, "target": flat.target,
+                     "centre_adu": flat.centre_adu, "corner_ratio": flat.corner_ratio,
+                     "assessment": {"status": a.status, "reasons": list(a.reasons), "age_days": a.age_days}},
+            "flat_frames": [str(p) for p in flat.flat_paths],
+            "flat_dark_frames": [str(p) for p in flat.dark_paths],
+        }
+
+    # --- UV level cross-check (step 4)
+    def _check_uv(self, m: ExposureMeasurement) -> None:
+        self.uv_note.hide()
+        self.uv_check = None
+        seconds = tv_seconds(self.codes[Prop.TV]) if self.codes else None
+        if m.median_adu is None or not seconds:
+            return
+        self.flats = flatlib.list_flats(self.flat_library)
+        declared = self._series_light()
+        check = flatlib.check_uv_level(self.flats, declared, m.median_adu / seconds)
+        self.uv_check = check
+        if check.status != "warn" or check.ratio is None:
+            return
+        names = {"white": self.tr("white light"), "uv70": self.tr("UV 70 %"), "uv100": self.tr("UV 100 %")}
+        text = self.tr("The background of the test frame is {0:.1f}x as bright as the stored flat of {1}.").format(
+            check.ratio, names.get(declared, declared))
+        if check.suggests:
+            text += " " + self.tr("It fits the flat of {0} much better: is that light on?").format(
+                names.get(check.suggests, check.suggests))
+        else:
+            text += " " + self.tr("Check which light is on, the exposure and the flat. A UV level that is off by "
+                                  "one step (70 % / 100 %) cannot be detected this way.")
+        self.uv_note.setText(text)
+        self.uv_note.show()
 
     # --- 6 series
     def _p6(self) -> QWidget:
@@ -710,8 +875,9 @@ class GelWizard(QDialog):
         lay.addWidget(self.focus_note)
         lay.addWidget(Note(self.tr("Process subtracts the dark frames, stacks the light frames and saves "
                                    "result.tif (linear, 16-bit) and preview.png in the gel folder. The RAW "
-                                   "frames are never modified; the flat field is skipped. Without Process, "
-                                   "Finish only saves the frames and metadata for later processing.")))
+                                   "frames are never modified; the flat field is divided out if one is "
+                                   "selected. Without Process, Finish only saves the frames and metadata for "
+                                   "later processing.")))
         lay.addStretch()
         return w
 
@@ -723,7 +889,7 @@ class GelWizard(QDialog):
             self.tr("calib/: {0} dark frames").format(len(self.dark_frames)),
             self.tr("Profile: {0} · channel {1}").format(p.name, p.channel),
             self.tr("Exposure: {0}").format(self._exposure_text()),
-            self.tr("Flat field: skipped (no library in prototype)"),
+            self._flat_summary(),
         ]))
         self._refresh_focus_note()
 
@@ -870,6 +1036,7 @@ class GelWizard(QDialog):
                 self._show_error(self.tr("Camera options are not available yet."))
             self._refresh_exposure()
         elif i == 4:
+            self._refresh_flats()
             n = self.frames.currentData()
             self.darks_val.setText(self.tr("{0} × {1} · {2}").format(
                 n, _secs(self.codes[Prop.TV]) if self.codes else "–",
@@ -1119,7 +1286,7 @@ class GelWizard(QDialog):
             "dark_frames": self.dark_frames,
             "test_frames": self.test_frames,
             "discarded_frames": self.discarded,
-            "flat": "skipped (no library in prototype)",
+            **self._flat_metadata(),
             "checklist": {
                 **{k: cb.isChecked() for k, cb in self.checks.items()},
                 "lights_off_and_cabinet_closed_and_eyepiece_covered_for_darks": all(
@@ -1131,6 +1298,9 @@ class GelWizard(QDialog):
                 "test_frame_sharpness": {p.name: v for p, v in self.test_sharp.items()},
                 "light_frame_sharpness": {p.name: v for p, v in self.light_sharp.items()},
             },
+            "uv_check": None if self.uv_check is None else {
+                "declared": self._series_light(), "status": self.uv_check.status,
+                "ratio_to_flat": self.uv_check.ratio, "suggests": self.uv_check.suggests},
             "processing": [],
             "status": STATUS,
         }

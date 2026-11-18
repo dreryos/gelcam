@@ -44,7 +44,7 @@ def env(tmp_path):
     orig = ctrl.set_value
     ctrl.set_value = lambda prop, code: (sent.append((prop, code)), orig(prop, code))[1]
     assert _wait(app, lambda: ctrl.lens.name is not None)
-    wiz = GelWizard(ctrl, tmp_path, "uv70")
+    wiz = GelWizard(ctrl, tmp_path, "uv70", flat_library=tmp_path / "flats")
     assert _wait(app, lambda: bool(wiz.opts))
     yield app, ctrl, cams[0], wiz, sent, tmp_path
     wiz.close()
@@ -374,7 +374,7 @@ def test_wizard_offers_only_the_magnifier_steps_of_the_camera(tmp_path):
     assert _wait(app, lambda: ctrl.live)
     ctrl.refresh_options()
     assert _wait(app, lambda: ctrl.zooms == (1, 5))
-    wiz = GelWizard(ctrl, tmp_path, "white")
+    wiz = GelWizard(ctrl, tmp_path, "white", flat_library=tmp_path / "flats")
     wiz.show()
     wiz.btn_next.click()
     wiz.btn_next.click()  # -> step 3 (focus)

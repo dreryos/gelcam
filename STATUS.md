@@ -60,8 +60,8 @@ Built over MockCamera, verified offscreen only (not yet on Windows with the 100D
 - [x] Synthetic checks: noise ≈ 1/√N, band ratios within 3 %, hot pixels, vignetting, shifts.
 - [x] Real UV scene: noise ratio 0.464 with 8 darks (theory 0.469), 7.6 s, 530 MB peak RSS.
 - [ ] Decide: 2 × N darks by default (ratio ~0.41 instead of 0.46, twice the dark time)?
-- [ ] Take a UV flat (uniformly fluorescing plate) — the white-light flat does not describe UV
-      illumination (see plan ch. 10 "Flat field findings").
+- [x] Flat library, flat capture window C1, picker in wizard step 5, UV level cross-check (18 Nov); see plan ch. 10 "Flat-field library and UV calibration".
+- [ ] Take the real UV flats (blank dyed gel or a uniformly fluorescing plate) for UV 70 % and 100 %: the white-light flat does not describe UV illumination (see plan ch. 10 "Flat field findings"). Try the capture window on the real camera.
 - [ ] Peak memory on the 2 GB lab PC (`tools/bench.py`); levers: release LibRaw buffers, tiles.
 
 ### 2. GUI – live view window per mockups LV1–LV4 (stage 1a) — prototype done

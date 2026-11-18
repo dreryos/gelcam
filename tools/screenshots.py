@@ -86,7 +86,7 @@ def main(argv: list[str] | None = None) -> int:
     wait(app, lambda: bool(cams) and cams[0].is_connected)
     ctrl.set_live_view(True)
     wait(app, lambda: ctrl.live)
-    wiz = GelWizard(ctrl, tmp, "white")
+    wiz = GelWizard(ctrl, tmp, "white", flat_library=tmp / "flats")
     wiz.resize(960, 640)
     wiz.show()
     for page, name in [(0, "wizard-profile"), (2, "wizard-focus"), (5, "wizard-series")]:

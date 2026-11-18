@@ -221,7 +221,14 @@ def selftest(check_camera: bool = False, out: Callable[[str], None] = print) -> 
             raise RuntimeError(f"{path} cannot be loaded")
         return f"loaded from {path}"
 
+    def flat_window() -> str:
+        from .storage import flat_library
+        from .ui.flat_dialog import FlatDialog  # imported lazily by the wizard: make sure a build contains it
+
+        return f"flat library at {flat_library.default_library_dir()} ({len(flat_library.list_flats(flat_library.default_library_dir()))} sets)"
+
     step("libraries", libs)
+    step("flat field window", flat_window)
     step("Czech translation", czech, required=False)
     step("TIFF / PNG writing", tiff_png)
     step("alignment (OpenCV)", phase)

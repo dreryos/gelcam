@@ -15,6 +15,7 @@ import numpy as np
 from PySide6.QtCore import QObject, Signal
 
 from ..camera import Camera, CameraError, CameraInfo, FocusStep, LensInfo, Prop
+from ..acquisition.flat import analyze_flat
 from ..processing.exposure import measure
 from ..processing.focus import sharpness_rgb
 from ..processing.raw_io import read_frame
@@ -33,6 +34,7 @@ class CameraController(QObject):
     connection_lost = Signal()
     reconnected = Signal(object)  # CameraInfo
     measured = Signal(object, object)  # Path, ExposureMeasurement
+    flat_analyzed = Signal(object, object)  # Path, FlatStats
     status_ready = Signal(object)  # dict: Prop -> int | str (image quality, battery) and "lens" -> LensInfo
 
     def __init__(self, camera_factory: Callable[[], Camera]) -> None:
@@ -46,6 +48,7 @@ class CameraController(QObject):
         self.lost = False
         self._live_before_loss = False
         self.lens = LensInfo()  # latest from refresh_options
+        self.camera_model = ""  # of the connected camera, for the metadata of calibration sets
         self.zooms: tuple[int, ...] = (1, 5, 10)  # magnifier steps of the connected camera (refresh_options)
         self._closed = False
 
@@ -96,6 +99,7 @@ class CameraController(QObject):
 
         def ok(info: CameraInfo | None) -> None:
             if info is not None:
+                self.camera_model = info.model
                 self.connected.emit(info)
                 self.refresh_options()
 
@@ -132,6 +136,20 @@ class CameraController(QObject):
         def job() -> None:
             try:
                 self.measured.emit(path, measure(read_frame(path), channel))
+            except Exception as exc:  # noqa: BLE001 - shown to the operator
+                self.error.emit(str(exc))
+
+        self._measure_pool.submit(job)
+
+    def analyze_flat_file(self, path: Path, channel: str) -> None:
+        """Centre level, corner falloff and saturation of a captured flat frame, off the camera thread."""
+
+        if self._closed:
+            return
+
+        def job() -> None:
+            try:
+                self.flat_analyzed.emit(path, analyze_flat(read_frame(path), channel))
             except Exception as exc:  # noqa: BLE001 - shown to the operator
                 self.error.emit(str(exc))
 
