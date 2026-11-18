@@ -20,6 +20,11 @@ Before taking images
 - Camera: connected by USB, switched on, mode dial on M, powered from the mains adapter (ACK-E15).
 - Close EOS Utility, digiCamControl and any other program that uses the camera.
 - Lens: the AF/MF switch on the lens must be on AF (otherwise autofocus does nothing, silently).
+- Camera menu: switch Movie servo AF off (and Continuous AF in the live view settings, if the menu has it), keep the
+  AF method on FlexiZone-Multi and the AF operation on One-Shot. Otherwise the camera keeps re-focusing on its own
+  under UV after the autofocus (measured: the sharpness drifted by 20 % within 45 s; with the setting off, by 2 %).
+- Live view under UV: it shows the exposure that is set, so raise the ISO (800 to 6400) to see the fluorescence while
+  focusing; focusing under white light is easier and the focus holds when you switch to UV.
 - Cabinet: the focus step needs a high-contrast target in the centre of the image.
 - Dark frames: lights off, cabinet closed, eyepiece covered.
 - The camera is set to RAW automatically before capture.
