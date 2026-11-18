@@ -12,5 +12,6 @@ __pycache__/
 build/
 dist/
 *.spec
+!packaging/gelcam.spec
 # macOS
 .DS_Store

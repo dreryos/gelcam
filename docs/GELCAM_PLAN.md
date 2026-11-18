@@ -507,6 +507,18 @@ Synthetic gel: background + Gaussian bands with known intensity + Poisson noise 
 
 ---
 
+### Windows package (18 Nov 2026)
+
+`uv run python packaging/build.py` runs PyInstaller (`packaging/gelcam.spec`, one-folder), trims unused files, copies the EDSDK DLLs and zips the result.
+
+- **Result:** `dist/GelCam/` **233 MB**, zip **92 MB**; `GelCam.exe` (windowed) and `GelCam-console.exe` (same program with a console, for `--selftest`) share one set of libraries. Trimmed (-59 MB, self-test still passes): OpenCV video codecs (ffmpeg), Qt's software OpenGL, Pillow AVIF. The biggest remaining parts are OpenCV (82 MB) and Qt; replacing OpenCV's phase correlation by numpy FFT (already listed in chapter 8 as worth measuring) would save about 80 MB.
+- **No Python needed:** the built self-test ran with a stripped `PATH` (system folders only). VC++ runtime (`VCRUNTIME140*.dll`, `MSVCP140*.dll`) and the universal CRT are bundled, so a PC without the VC++ redistributable works. The EDSDK DLLs are found in `edsdk/Dll` next to the exe, the headers are not needed.
+- **Start-up and memory** (dev PC, windowed, `--mock`): window up in ~2 s, ~96 MB resident. The lab PC (2 GB, dual core) still has to be measured with `tools/bench.py`.
+- **`GelCam-console.exe --selftest [--camera]`** checks libraries (numpy, OpenCV, rawpy, tifffile, Pillow), TIFF/PNG writing, phase correlation, a window over the simulated camera, the EDSDK DLL and, with `--camera`, a real connection. Verified from the package with the real 100D: all seven checks OK.
+- **Logging and crashes:** a rotating log in `%APPDATA%\GelCam\gelcam.log` and an exception hook that logs uncaught errors and shows a dialog with the log path (the windowed exe has no console).
+- **Language:** English is the source language. `--lang cs`, `GELCAM_LANG` or a Czech system language load `translations/gelcam_cs.qm` if it exists; without it the app stays English. The Czech translation itself is not written yet.
+- **Not done / not verified:** a clean Windows 10 PC without administrator rights (only a stripped environment on this PC was tested), AppLocker / SmartScreen behaviour, code signing, and whether Canon's terms allow handing the EDSDK DLLs to other PCs (to be checked in the Canon Developer Programme terms; `--no-edsdk` builds without them).
+
 ### Performance on the target PC (measured 10 Nov 2026)
 
 The lab PC is a dual-core below 2 GHz with **2 GB RAM** on Windows 10 x64. The numbers below

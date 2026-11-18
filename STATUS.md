@@ -107,8 +107,9 @@ Built over MockCamera, verified offscreen only (not yet on Windows with the 100D
 - [ ] Still to do: visual check of the real windows with fonts (Windows, DPI).
 - [ ] Run `tools/edsdk_smoke.py`: does the 100D report lens name and focal length? If yes,
       make the wizard's zoom check automatic (compare with the flat's focal length).
-- [ ] PyInstaller onedir, trimmed Qt modules; test on account without admin rights,
-      PC without VC++ runtime; check AppLocker/SmartScreen.
+- [x] PyInstaller onedir package (`packaging/build.py`, 233 MB / 92 MB zip, selftest `GelCam-console.exe --selftest --camera` passes with the real 100D, VC++ runtime bundled) (18 Nov).
+- [ ] Test the package on a clean Windows 10 PC / account without admin rights; check AppLocker/SmartScreen; confirm the Canon licence allows shipping the EDSDK DLLs.
+- [ ] Czech translation (`translations/gelcam_cs.ts/.qm`): the loader exists, the translation does not.
 - [ ] Final UI check on Windows (fonts, DPI); week of real gels without blocking error.
 
 ## Open questions (plan ch. 11)

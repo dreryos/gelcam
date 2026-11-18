@@ -99,6 +99,21 @@ The UI and the processing pipeline run anywhere; only the real camera is tied to
 - **Rule:** nothing in `ui/` or `acquisition/` may call EDSDK directly — only the `Camera`
   interface — otherwise the code stops running off Windows.
 
+## Building the Windows package (for a lab PC)
+
+```
+uv sync
+uv run python packaging/build.py             # dist/GelCam/ and dist/GelCam-<version>-win64.zip
+uv run python packaging/build.py --no-edsdk  # without the Canon DLLs (see below)
+```
+
+The result is a self-contained folder (about 230 MB, 90 MB zipped): no Python, no installation and no
+administrator rights are needed. Unzip it anywhere and run `GelCam.exe`; on a new PC first run
+`GelCam-console.exe --selftest --camera` to check it. `packaging/README-LAB.txt` (shipped inside the package)
+is the short operator guide. The Canon EDSDK DLLs are copied from `vendor/edsdk/Dll` into `edsdk/Dll` inside the
+package: check the Canon Developer Programme terms before giving the package to others (or build with
+`--no-edsdk` and copy the DLLs on each PC). The log file and settings live in `%APPDATA%\GelCam`.
+
 ## Documentation
 
 - [docs/GELCAM_PLAN.md](docs/GELCAM_PLAN.md) — plan, architecture, measured sensor data and the
