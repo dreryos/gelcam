@@ -12,6 +12,11 @@ from pathlib import Path
 
 
 def main(argv: list[str] | None = None) -> int:
+    raw_args = sys.argv[1:] if argv is None else argv
+    if raw_args[:1] == ["--bench"]:  # speed and memory report of this PC (see gelcam/bench.py)
+        from .bench import main as bench_main
+
+        return bench_main(raw_args[1:])
     ap = argparse.ArgumentParser(prog="gelcam")
     ap.add_argument("--mock", nargs="?", const="", metavar="FOLDER_WITH_CR2",
                     help="simulated camera; optionally a folder with CR2 files it will 'shoot'")

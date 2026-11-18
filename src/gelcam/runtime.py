@@ -224,6 +224,7 @@ def selftest(check_camera: bool = False, out: Callable[[str], None] = print) -> 
     def flat_window() -> str:
         from .storage import flat_library
         from .ui.flat_dialog import FlatDialog  # imported lazily by the wizard: make sure a build contains it
+        from .ui.settings_dialog import SettingsDialog  # imported lazily by the main window, too
 
         return f"flat library at {flat_library.default_library_dir()} ({len(flat_library.list_flats(flat_library.default_library_dir()))} sets)"
 

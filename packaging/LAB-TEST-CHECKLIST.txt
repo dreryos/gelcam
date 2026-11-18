@@ -1,0 +1,49 @@
+GelCam on the lab PC - test checklist
+=====================================
+
+Folder layout (as copied by packaging/deploy.py):
+    GelCam\      the program (no installation, no administrator rights)
+    sample\      CR2 frames for the speed / memory test (lights, darks, flats, flat_darks)
+    this file
+
+Please note down what happens at every step, even if it works. Bring back:
+  - %APPDATA%\GelCam\gelcam.log   (type %APPDATA% into the Explorer address bar)
+  - %APPDATA%\GelCam\bench-*.txt  (the report from step 3)
+  - a screenshot or a photo of any error message
+
+1. Does it start?  (the first run may show Windows SmartScreen: More info -> Run anyway)
+   Copy the GelCam folder to the PC's local disk (not a network drive), then double-click
+   GelCam\GelCam.exe --mock   (create a shortcut with --mock added, or use the command line below).
+   Note: SmartScreen warning? Antivirus message or quarantine? AppLocker / "blocked by your administrator"?
+   Does the window fit the screen? Screen resolution: ______  Windows version: ______  RAM: ______
+
+2. Self-test  (Command Prompt in the GelCam folder)
+       GelCam-console.exe --selftest
+   Every line must say OK and the last one "all required checks passed". With the camera connected
+   and switched on:
+       GelCam-console.exe --selftest --camera
+
+3. Speed and memory
+       GelCam-console.exe --bench --sample ..\sample
+   Takes a few minutes. It prints the live view speed and the REAL processing (8 light frames, 8 darks,
+   8 flats, 8 flat darks) with the time and the PEAK MEMORY. Reference on the development PC (8 cores,
+   34 GB): 47 s and 651 MB. The report is saved to %APPDATA%\GelCam\bench-<date>.txt.
+   Question to answer: does the peak memory leave room on a 2 GB machine (Windows + GelCam window)?
+
+4. With the camera  (EOS 100D on USB, switched on, mode M, AC adapter, lens switch on AF, EOS Utility closed)
+       GelCam.exe
+   - live view smooth? lens and battery shown?  - autofocus on a printed target  - take a single frame
+   - the frames go to the folder shown in "Settings..." (change it there if Documents is synchronised by OneDrive)
+
+5. Wizard  (New gel image...)
+   One short run: 4 frames, 1-2 s exposure, then the darks (lights off, cabinet closed, eyepiece covered)
+   and "Process". Does result.tif appear? How long did Process take?
+
+6. Flat field  (optional)
+   Step 5 -> "Take new flat..." with a white sheet and white light as a stand-in; note how long it takes.
+
+7. Language
+   GelCam-Czech.cmd starts the Czech interface.
+
+Problems to look for:  window larger than the screen, text cut off, a slow live view, Process taking minutes,
+the program closing by itself (look at gelcam.log), the camera not found (another program holds it).

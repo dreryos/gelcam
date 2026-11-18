@@ -12,7 +12,6 @@ from datetime import datetime
 from pathlib import Path
 
 import numpy as np
-from platformdirs import user_documents_dir
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
@@ -34,6 +33,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .. import settings as cfg
 from ..camera import CameraInfo, FocusStep, Prop, values
 from ..processing.focus import sharpness_rgb
 from . import theme
@@ -91,7 +91,8 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("GelCam")
         self.resize(1280, 800)
         self.ctrl = controller
-        self.out_dir = Path(user_documents_dir()) / "GelCam" / "images"
+        self.settings = cfg.load()
+        self.out_dir = self.settings.images_dir
         self.light = "white"
         self._options_updating = False
         self._frame: np.ndarray | None = None
@@ -176,6 +177,9 @@ class MainWindow(QMainWindow):
         row.addWidget(self.chip_quality)
         row.addWidget(self.light_combo)
         row.addStretch(1)
+        self.btn_settings = QPushButton(self.tr("Settings…"))
+        self.btn_settings.clicked.connect(self._open_settings)
+        row.addWidget(self.btn_settings)
         row.addWidget(self.btn_new)
         return bar
 
@@ -649,10 +653,23 @@ class MainWindow(QMainWindow):
         self.light = str(self.light_combo.currentData())
         self._update_status()
 
+    def _open_settings(self) -> None:
+        from .settings_dialog import SettingsDialog
+
+        dlg = SettingsDialog(self.settings, self)
+        if dlg.exec():
+            self.settings = dlg.result_settings
+            try:
+                cfg.save(self.settings)
+            except OSError as exc:
+                self._log("ERROR", self.tr("The settings could not be saved: {0}").format(exc))
+            self.out_dir = self.settings.images_dir
+            self._log("INFO", self.tr("Images are saved to {0}").format(self.out_dir))
+
     def _open_wizard(self) -> None:
         from .wizard import GelWizard
 
-        self._wizard = GelWizard(self.ctrl, self.out_dir, self.light, self)
+        self._wizard = GelWizard(self.ctrl, self.out_dir, self.light, self, flat_library=self.settings.flats_dir)
         self._wizard.open()  # window-modal: no settings/capture interleaving with a series
 
     # --- live frames and display (preview only; the frame from the controller is never modified) ---

@@ -22,8 +22,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Sequence
 
-from platformdirs import user_documents_dir
-
 SCHEMA = 1
 META_NAME = "flat.json"
 LIGHTS = ("white", "uv70", "uv100")
@@ -34,7 +32,10 @@ APERTURE_TOLERANCE = 0.05  # f-number
 
 
 def default_library_dir() -> Path:
-    return Path(user_documents_dir()) / "GelCam" / "calibration" / "flats"
+    """The library under the root folder chosen in the settings (default `Documents/GelCam`)."""
+    from .. import settings
+
+    return settings.load().flats_dir
 
 
 @dataclass(frozen=True)

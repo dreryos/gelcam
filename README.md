@@ -114,6 +114,12 @@ is the short operator guide. The Canon EDSDK DLLs are copied from `vendor/edsdk/
 package: check the Canon Developer Programme terms before giving the package to others (or build with
 `--no-edsdk` and copy the DLLs on each PC). The log file and settings live in `%APPDATA%\GelCam`.
 
+## Settings and testing on another PC
+
+- `Settings...` in the main window sets the root folder for images and the flat-field library (stored in `%APPDATA%/GelCam/settings.json`).
+- `GelCam-console.exe --bench --sample DIR` measures speed and peak memory of the real pipeline on a PC.
+- `uv run python packaging/deploy.py --to E:/GelCam-lab --sample testdata/bench_sample` copies the package, a sample set and `packaging/LAB-TEST-CHECKLIST.txt` to a folder or USB stick.
+
 ## Languages
 
 English is the source language. A Czech translation is included (`src/gelcam/translations/gelcam_cs.ts`): it is used
