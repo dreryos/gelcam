@@ -1,6 +1,6 @@
 """User settings, stored in `%APPDATA%\\GelCam\\settings.json` (never in the program folder).
 
-So far one setting: the root folder under which the application keeps everything it writes for the user:
+Settings: the root folder under which the application keeps everything it writes for the user:
 `<root>/images/` (gel folders and single frames) and `<root>/calibration/flats/` (the flat-field library).
 Unset, the root is `Documents/GelCam`. Existing folders are not moved when the root changes; the new root
 applies to what is taken from then on.
@@ -30,6 +30,8 @@ def default_root() -> Path:
 class Settings:
     root: Path | None = None  # None = the default root
     live_view_aperture: bool = True  # open the aperture for the live view (f/5.6 or the widest); captures keep theirs
+    frame_tiff: bool = True  # a single frame is also saved as a black-and-white TIFF
+    frame_tiff_inverted: bool = False  # ... inverted (dark bands on a white background)
 
     @property
     def effective_root(self) -> Path:
@@ -54,7 +56,9 @@ def load() -> Settings:
         data = json.loads(settings_path().read_text(encoding="utf-8"))
         root = data.get("root")
         return Settings(root=Path(root) if isinstance(root, str) and root.strip() else None,
-                        live_view_aperture=data.get("live_view_aperture", True) is not False)
+                        live_view_aperture=data.get("live_view_aperture", True) is not False,
+                        frame_tiff=data.get("frame_tiff", True) is not False,
+                        frame_tiff_inverted=data.get("frame_tiff_inverted", False) is True)
     except (OSError, ValueError, AttributeError):
         return Settings()
 
@@ -63,7 +67,8 @@ def save(settings: Settings) -> Path:
     """Writes the settings atomically."""
     target = settings_path()
     data = {"root": str(settings.root) if settings.root else None,
-            "live_view_aperture": settings.live_view_aperture}
+            "live_view_aperture": settings.live_view_aperture,
+            "frame_tiff": settings.frame_tiff, "frame_tiff_inverted": settings.frame_tiff_inverted}
     fd, tmp = tempfile.mkstemp(dir=target.parent, prefix=".settings-", suffix=".tmp")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:

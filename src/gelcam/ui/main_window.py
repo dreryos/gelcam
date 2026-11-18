@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import time
 from collections import deque
+from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 
@@ -16,6 +17,7 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QButtonGroup,
+    QCheckBox,
     QComboBox,
     QDialog,
     QFormLayout,
@@ -137,6 +139,7 @@ class MainWindow(QMainWindow):
         c.live_iso_flag_changed.connect(self._sync_bright_button)
         c.frame_ready.connect(self._on_frame)
         c.captured.connect(self._on_captured)
+        c.tiff_exported.connect(self._on_tiff_exported)
         c.measured.connect(self._on_measured)
         c.message.connect(self._on_message)
         c.error.connect(lambda m: self._log("ERROR", m))
@@ -437,6 +440,16 @@ class MainWindow(QMainWindow):
         self.btn_capture = QPushButton(self.tr("Capture frame"))
         self.btn_capture.setProperty("primary", True)
         self.btn_capture.clicked.connect(self._capture)
+        self.chk_tiff = QCheckBox(self.tr("Also save a B&W TIFF"))
+        self.chk_tiff.setToolTip(self.tr("One TIFF of the selected channel (R, G or B), next to the RAW file. "
+                                         "The RAW frame is always kept and never changed."))
+        self.chk_tiff.setChecked(self.settings.frame_tiff)
+        self.chk_inverted = QCheckBox(self.tr("Inverted (dark on white)"))
+        self.chk_inverted.setToolTip(self.tr("For looking at and for reports. Measure on the non-inverted TIFF or the RAW."))
+        self.chk_inverted.setChecked(self.settings.frame_tiff_inverted)
+        self.chk_inverted.setEnabled(self.settings.frame_tiff)
+        self.chk_tiff.toggled.connect(self._tiff_options_changed)
+        self.chk_inverted.toggled.connect(self._tiff_options_changed)
         self.lbl_file = QLabel("–")
         self.lbl_file.setProperty("role", "dim")
         self.stat_bright = StatValue(self.tr("Brightest"))
@@ -446,7 +459,7 @@ class MainWindow(QMainWindow):
         stats.addWidget(self.stat_sat)
         measured = QLabel(self.tr("measured on RAW"))
         measured.setProperty("role", "dim")
-        for w in (self.btn_capture, self.lbl_file):
+        for w in (self.btn_capture, self.chk_tiff, self.chk_inverted, self.lbl_file):
             single.body.addWidget(w)
         single.body.addLayout(stats)
         single.body.addWidget(measured)
@@ -655,6 +668,22 @@ class MainWindow(QMainWindow):
         self.stat_bright.set_value(self.tr("measuring…"))
         self.stat_sat.set_value("…")
         self.ctrl.measure_file(path, _CHANNELS[self._channel()])
+        if self.chk_tiff.isChecked():
+            self.ctrl.export_tiff(path, _CHANNELS[self._channel()], self.chk_inverted.isChecked())
+
+    def _tiff_options_changed(self) -> None:
+        self.chk_inverted.setEnabled(self.chk_tiff.isChecked())
+        self.settings = replace(self.settings, frame_tiff=self.chk_tiff.isChecked(),
+                                frame_tiff_inverted=self.chk_inverted.isChecked())
+        try:
+            cfg.save(self.settings)
+        except OSError as exc:
+            self._log("ERROR", self.tr("The settings could not be saved: {0}").format(exc))
+
+    def _on_tiff_exported(self, raw: Path, tif: Path) -> None:
+        self._log("INFO", self.tr("Saved: {0}").format(tif))
+        if raw == self._last_capture:
+            self.lbl_file.setText(f"{raw.name}, {tif.name}")
 
     def _on_measured(self, path: Path, m) -> None:
         if path != self._last_capture:

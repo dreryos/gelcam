@@ -94,6 +94,7 @@ QComboBox, QLineEdit {{
     background: {PANEL}; border: 1px solid #BFBFBF; border-radius: 4px;
     padding: 3px 8px; min-height: {MIN_TARGET - 6}px; font-weight: normal;
 }}
+QCheckBox {{ min-height: {MIN_TARGET}px; spacing: 6px; font-weight: normal; }}
 QPlainTextEdit {{ background: {PANEL}; border: 1px solid {LINE}; font-weight: normal; }}
 QSlider::groove:horizontal {{ height: 4px; background: {GROOVE}; border-radius: 2px; }}
 QSlider::sub-page:horizontal {{ background: {ACC}; border-radius: 2px; }}

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 from PySide6.QtWidgets import (
@@ -17,6 +18,7 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle(self.tr("Settings"))
         self.resize(560, 460)
+        self._current = current
         self._root: Path | None = current.root  # None = default
         lay = QVBoxLayout(self)
 
@@ -72,7 +74,7 @@ class SettingsDialog(QDialog):
 
     @property
     def result_settings(self) -> cfg.Settings:
-        return cfg.Settings(root=self._root, live_view_aperture=self.live_aperture.isChecked())
+        return replace(self._current, root=self._root, live_view_aperture=self.live_aperture.isChecked())
 
     def _choose(self) -> None:
         start = str(self._root or cfg.default_root())

@@ -110,6 +110,7 @@ Built over MockCamera, verified offscreen only (not yet on Windows with the 100D
 - [x] PyInstaller onedir package (`packaging/build.py`, 233 MB / 92 MB zip, selftest `GelCam-console.exe --selftest --camera` passes with the real 100D, VC++ runtime bundled) (18 Nov).
 - [x] Settings: root folder for images and the flat library (18 Nov); `--bench --sample` real-pipeline benchmark; `packaging/deploy.py`, first deployment on E:/GelCam-lab (18 Nov).
 - [x] "Bright live view" button (ISO 6400 for the live view only) in the Focus card and the wizard focus step (18 Nov).
+- [x] Single frame also saved as a black-and-white 16-bit TIFF of the selected channel, optionally inverted (options saved in settings; 18 Nov).
 - [x] Live view at f/5.6 (or the widest), captures at the set aperture; switch in Settings (18 Nov).
 - [x] Black live view explained in the window (hint with the set exposure; 18 Nov).
 - [x] Focus drifting under UV after autofocus: stopped by switching Movie servo AF off in the camera menu (spread 21-24 % -> 2 % over 45 s); written into the camera preparation of README-LAB (18 Nov).

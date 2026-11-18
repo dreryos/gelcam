@@ -20,6 +20,7 @@ from ..camera import values
 from ..camera.values import av_fnumber
 from ..acquisition.flat import analyze_flat
 from ..processing.exposure import measure
+from ..processing.export import frame_tiff_name, write_frame_tiff
 from ..processing.focus import sharpness_rgb
 from ..processing.raw_io import read_frame
 
@@ -38,6 +39,7 @@ class CameraController(QObject):
     reconnected = Signal(object)  # CameraInfo
     measured = Signal(object, object)  # Path, ExposureMeasurement
     flat_analyzed = Signal(object, object)  # Path, FlatStats
+    tiff_exported = Signal(object, object)  # RAW Path, TIFF Path
     live_boost_changed = Signal(object)  # {Prop: (live view value, operator's value)} while they differ, else None
     live_iso_flag_changed = Signal(bool)  # the "bright live view" switch, so every button can follow it
     status_ready = Signal(object)  # dict: Prop -> int | str (image quality, battery) and "lens" -> LensInfo
@@ -152,6 +154,22 @@ class CameraController(QObject):
                 self.measured.emit(path, measure(read_frame(path), channel))
             except Exception as exc:  # noqa: BLE001 - shown to the operator
                 self.error.emit(str(exc))
+
+        self._measure_pool.submit(job)
+
+    def export_tiff(self, path: Path, channel: str, inverted: bool) -> None:
+        """Black-and-white TIFF of one channel of a captured frame next to it, off the camera thread."""
+
+        if self._closed:
+            return
+
+        def job() -> None:
+            try:
+                dest = path.with_name(frame_tiff_name(path, inverted))
+                write_frame_tiff(dest, read_frame(path), channel, inverted, source=path.name)
+                self.tiff_exported.emit(path, dest)
+            except Exception as exc:  # noqa: BLE001 - shown to the operator
+                self.error.emit(self.tr("Could not save the TIFF of {0}: {1}").format(path.name, exc))
 
         self._measure_pool.submit(job)
 
