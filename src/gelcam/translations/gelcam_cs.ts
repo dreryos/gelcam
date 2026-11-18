@@ -4,37 +4,47 @@
 <context>
     <name>CameraController</name>
     <message>
-        <location filename="../ui/controller.py" line="86"/>
+        <location filename="../ui/controller.py" line="93"/>
         <source>Camera is not connected.</source>
         <translation>Fotoaparát není připojen.</translation>
     </message>
     <message>
-        <location filename="../ui/controller.py" line="193"/>
+        <location filename="../ui/controller.py" line="210"/>
         <source>Set {0}.</source>
         <translation>Nastaveno: {0}.</translation>
     </message>
     <message>
-        <location filename="../ui/controller.py" line="269"/>
+        <location filename="../ui/controller.py" line="301"/>
+        <source>Could not open the aperture for the live view: {0}</source>
+        <translation>Clonu pro živý náhled se nepodařilo otevřít: {0}</translation>
+    </message>
+    <message>
+        <location filename="../ui/controller.py" line="312"/>
+        <source>Could not restore the aperture: {0}</source>
+        <translation>Clonu se nepodařilo vrátit: {0}</translation>
+    </message>
+    <message>
+        <location filename="../ui/controller.py" line="336"/>
         <source>Autofocus finished (sharpness could not be measured).</source>
         <translation>Autofokus dokončen (ostrost se nepodařilo změřit).</translation>
     </message>
     <message>
-        <location filename="../ui/controller.py" line="273"/>
+        <location filename="../ui/controller.py" line="340"/>
         <source>Focused: sharpness {0}.</source>
         <translation>Zaostřeno: ostrost {0}.</translation>
     </message>
     <message>
-        <location filename="../ui/controller.py" line="276"/>
+        <location filename="../ui/controller.py" line="343"/>
         <source>Autofocus finished, sharpness unchanged ({0}). If the image is already sharp, nothing is needed. If it is blurry: run autofocus again (it can fail when the lens is far out of focus; a few focus steps first can help), check that the lens switch is on AF and that a high-contrast target is in the centre of the image.</source>
         <translation>Autofokus dokončen, ostrost se nezměnila ({0}). Pokud je obraz už ostrý, nic dalšího není potřeba. Pokud je rozmazaný: spusťte autofokus znovu (může selhat, když je objektiv hodně rozostřený; pomoci může nejdřív pár kroků ostření), zkontrolujte, že přepínač na objektivu je na AF a že je uprostřed obrazu kontrastní cíl.</translation>
     </message>
     <message>
-        <location filename="../ui/controller.py" line="281"/>
+        <location filename="../ui/controller.py" line="348"/>
         <source>Autofocus finished but sharpness dropped ({0}). Put a high-contrast target (marker lane, well edge, printed text) in the centre of the image and run autofocus again.</source>
         <translation>Autofokus dokončen, ale ostrost klesla ({0}). Dejte doprostřed obrazu kontrastní cíl (pruh markeru, okraj jamky, tištěný text) a spusťte autofokus znovu.</translation>
     </message>
     <message>
-        <location filename="../ui/controller.py" line="288"/>
+        <location filename="../ui/controller.py" line="355"/>
         <source>Capturing…</source>
         <translation>Snímám…</translation>
     </message>
@@ -1036,22 +1046,22 @@
 <context>
     <name>LogDialog</name>
     <message>
-        <location filename="../ui/main_window.py" line="57"/>
+        <location filename="../ui/main_window.py" line="59"/>
         <source>Log</source>
         <translation>Záznam</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="64"/>
+        <location filename="../ui/main_window.py" line="66"/>
         <source>All</source>
         <translation>Vše</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="64"/>
+        <location filename="../ui/main_window.py" line="66"/>
         <source>Warnings</source>
         <translation>Varování</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="64"/>
+        <location filename="../ui/main_window.py" line="66"/>
         <source>Errors</source>
         <translation>Chyby</translation>
     </message>
@@ -1059,431 +1069,441 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../ui/main_window.py" line="150"/>
+        <location filename="../ui/main_window.py" line="154"/>
         <source>Looking for the camera…</source>
         <translation>Hledám fotoaparát…</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="163"/>
-        <location filename="../ui/main_window.py" line="514"/>
+        <location filename="../ui/main_window.py" line="167"/>
+        <location filename="../ui/main_window.py" line="529"/>
         <source>No camera</source>
         <translation>Žádný fotoaparát</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="171"/>
+        <location filename="../ui/main_window.py" line="175"/>
         <source>Light: {0}</source>
         <translation>Světlo: {0}</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="173"/>
+        <location filename="../ui/main_window.py" line="177"/>
         <source>New gel image…</source>
         <translation>Nový snímek gelu…</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="181"/>
+        <location filename="../ui/main_window.py" line="185"/>
         <source>Settings…</source>
         <translation>Nastavení…</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="190"/>
+        <location filename="../ui/main_window.py" line="194"/>
         <source>View</source>
         <translation>Zobrazení</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="191"/>
+        <location filename="../ui/main_window.py" line="195"/>
         <source>Grid</source>
         <translation>Mřížka</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="192"/>
+        <location filename="../ui/main_window.py" line="196"/>
         <source>Clipping</source>
         <translation>Přepaly</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="193"/>
+        <location filename="../ui/main_window.py" line="197"/>
         <source>Histogram</source>
         <translation>Histogram</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="201"/>
+        <location filename="../ui/main_window.py" line="205"/>
         <source>Zoom</source>
         <translation>Zoom</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="205"/>
+        <location filename="../ui/main_window.py" line="209"/>
         <source>Zoom {0}×</source>
         <translation>Zoom {0}×</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="216"/>
-        <location filename="../ui/main_window.py" line="511"/>
+        <location filename="../ui/main_window.py" line="220"/>
+        <location filename="../ui/main_window.py" line="526"/>
         <source>Camera is not connected</source>
         <translation>Fotoaparát není připojen</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="237"/>
+        <location filename="../ui/main_window.py" line="247"/>
         <source>● Connection lost — reconnecting</source>
         <translation>● Spojení ztraceno — obnovuji</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="243"/>
+        <location filename="../ui/main_window.py" line="253"/>
         <source>ISO, shutter and aperture will be restored automatically.</source>
         <translation>ISO, čas závěrky a clona se obnoví automaticky.</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="245"/>
+        <location filename="../ui/main_window.py" line="255"/>
         <source>Reconnect now</source>
         <translation>Připojit hned</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="247"/>
+        <location filename="../ui/main_window.py" line="257"/>
         <source>Cancel</source>
         <translation>Zrušit</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="265"/>
+        <location filename="../ui/main_window.py" line="275"/>
         <source>No camera found</source>
         <translation>Fotoaparát nenalezen</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="274"/>
+        <location filename="../ui/main_window.py" line="284"/>
         <source>EOS Utility or another tethering app is not running</source>
         <translation>Neběží EOS Utility ani jiná aplikace pro ovládání fotoaparátu</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="275"/>
+        <location filename="../ui/main_window.py" line="285"/>
         <source>USB cable connected directly, not through a hub</source>
         <translation>Kabel USB je zapojen přímo, ne přes rozbočovač</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="276"/>
+        <location filename="../ui/main_window.py" line="286"/>
         <source>Camera switched on, mode M, AC adapter plugged in</source>
         <translation>Fotoaparát je zapnutý, v režimu M, síťový adaptér zapojen</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="280"/>
+        <location filename="../ui/main_window.py" line="290"/>
         <source>Try again</source>
         <translation>Zkusit znovu</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="283"/>
+        <location filename="../ui/main_window.py" line="293"/>
         <source>Open log</source>
         <translation>Otevřít záznam</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="296"/>
+        <location filename="../ui/main_window.py" line="306"/>
         <source>Display — preview only, result.tif and the RAW stay linear</source>
         <translation>Zobrazení — jen náhled, result.tif i RAW zůstávají lineární</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="302"/>
+        <location filename="../ui/main_window.py" line="312"/>
         <source>Auto stretch</source>
         <translation>Automatický kontrast</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="303"/>
+        <location filename="../ui/main_window.py" line="313"/>
         <source>Reset</source>
         <translation>Obnovit</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="304"/>
+        <location filename="../ui/main_window.py" line="314"/>
         <source>Invert</source>
         <translation>Invertovat</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="312"/>
+        <location filename="../ui/main_window.py" line="322"/>
         <source>Channel</source>
         <translation>Kanál</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="330"/>
+        <location filename="../ui/main_window.py" line="340"/>
         <source>Black</source>
         <translation>Černá</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="331"/>
+        <location filename="../ui/main_window.py" line="341"/>
         <source>White</source>
         <translation>Bílá</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="332"/>
+        <location filename="../ui/main_window.py" line="342"/>
         <source>Gamma</source>
         <translation>Gama</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="356"/>
+        <location filename="../ui/main_window.py" line="366"/>
         <source>Camera</source>
         <translation>Fotoaparát</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="360"/>
+        <location filename="../ui/main_window.py" line="370"/>
         <source>Model</source>
         <translation>Model</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="361"/>
+        <location filename="../ui/main_window.py" line="371"/>
         <source>Quality</source>
         <translation>Kvalita</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="364"/>
+        <location filename="../ui/main_window.py" line="374"/>
         <source>Lens</source>
         <translation>Objektiv</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="365"/>
+        <location filename="../ui/main_window.py" line="375"/>
         <source>Focal length</source>
         <translation>Ohnisková vzdálenost</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="369"/>
+        <location filename="../ui/main_window.py" line="379"/>
         <source>Battery</source>
         <translation>Baterie</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="375"/>
+        <location filename="../ui/main_window.py" line="385"/>
         <source>Focus</source>
         <translation>Ostření</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="380"/>
+        <location filename="../ui/main_window.py" line="390"/>
         <source>sharpness · variance of Laplacian</source>
         <translation>ostrost · rozptyl Laplaciánu</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="382"/>
+        <location filename="../ui/main_window.py" line="392"/>
         <source>Run autofocus</source>
         <translation>Spustit autofokus</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="387"/>
+        <location filename="../ui/main_window.py" line="397"/>
         <source>Focus nearer, large step</source>
         <translation>Zaostřit blíž, velký krok</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="388"/>
+        <location filename="../ui/main_window.py" line="398"/>
         <source>Focus nearer, medium step</source>
         <translation>Zaostřit blíž, střední krok</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="389"/>
+        <location filename="../ui/main_window.py" line="399"/>
         <source>Focus nearer, small step</source>
         <translation>Zaostřit blíž, malý krok</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="390"/>
+        <location filename="../ui/main_window.py" line="400"/>
         <source>Focus farther, small step</source>
         <translation>Zaostřit dál, malý krok</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="391"/>
+        <location filename="../ui/main_window.py" line="401"/>
         <source>Focus farther, medium step</source>
         <translation>Zaostřit dál, střední krok</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="392"/>
+        <location filename="../ui/main_window.py" line="402"/>
         <source>Focus farther, large step</source>
         <translation>Zaostřit dál, velký krok</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="396"/>
+        <location filename="../ui/main_window.py" line="406"/>
         <source>Fine steps (near ← → far)</source>
         <translation>Jemné kroky (blíž ← → dál)</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="400"/>
+        <location filename="../ui/main_window.py" line="410"/>
         <source>Focus under white light, then switch back to UV. The shutter never refocuses.</source>
         <translation>Ostřete při bílém světle a pak přepněte zpět na UV. Spoušť už nikdy neostří znovu.</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="402"/>
+        <location filename="../ui/main_window.py" line="412"/>
         <source>Exposure</source>
         <translation>Expozice</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="405"/>
+        <location filename="../ui/main_window.py" line="415"/>
         <source>ISO</source>
         <translation>ISO</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="406"/>
+        <location filename="../ui/main_window.py" line="416"/>
         <source>Shutter</source>
         <translation>Čas závěrky</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="407"/>
+        <location filename="../ui/main_window.py" line="417"/>
         <source>Aperture</source>
         <translation>Clona</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="410"/>
+        <location filename="../ui/main_window.py" line="420"/>
         <source>Values are read from the camera; only what it allows is offered.</source>
         <translation>Hodnoty se čtou z fotoaparátu; nabízí se jen to, co povolí.</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="416"/>
+        <location filename="../ui/main_window.py" line="431"/>
         <source>Single frame</source>
         <translation>Jeden snímek</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="417"/>
+        <location filename="../ui/main_window.py" line="432"/>
         <source>Capture frame</source>
         <translation>Pořídit snímek</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="422"/>
+        <location filename="../ui/main_window.py" line="437"/>
         <source>Brightest</source>
         <translation>Nejjasnější</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="423"/>
+        <location filename="../ui/main_window.py" line="438"/>
         <source>Saturated</source>
         <translation>Saturováno</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="427"/>
+        <location filename="../ui/main_window.py" line="442"/>
         <source>measured on RAW</source>
         <translation>změřeno na RAW</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="452"/>
-        <location filename="../ui/main_window.py" line="749"/>
+        <location filename="../ui/main_window.py" line="467"/>
+        <location filename="../ui/main_window.py" line="789"/>
         <source>Disconnected</source>
         <translation>Odpojeno</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="457"/>
+        <location filename="../ui/main_window.py" line="472"/>
         <source>Log</source>
         <translation>Záznam</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="489"/>
+        <location filename="../ui/main_window.py" line="504"/>
         <source>Connected: {0}</source>
         <translation>Připojeno: {0}</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="492"/>
+        <location filename="../ui/main_window.py" line="507"/>
         <source>Starting live view…</source>
         <translation>Spouštím živý náhled…</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="502"/>
+        <location filename="../ui/main_window.py" line="517"/>
         <source>Camera disconnected.</source>
         <translation>Fotoaparát odpojen.</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="503"/>
+        <location filename="../ui/main_window.py" line="518"/>
         <source>Disconnected.</source>
         <translation>Odpojeno.</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="528"/>
+        <location filename="../ui/main_window.py" line="543"/>
         <source>Connection lost.</source>
         <translation>Spojení ztraceno.</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="531"/>
+        <location filename="../ui/main_window.py" line="546"/>
         <source>Connection lost</source>
         <translation>Spojení ztraceno</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="539"/>
+        <location filename="../ui/main_window.py" line="554"/>
         <source>Last frame {0} s ago</source>
         <translation>Poslední snímek před {0} s</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="549"/>
+        <location filename="../ui/main_window.py" line="564"/>
         <source>Attempt {0}</source>
         <translation>Pokus {0}</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="565"/>
+        <location filename="../ui/main_window.py" line="580"/>
         <source>Reconnected: {0}</source>
         <translation>Znovu připojeno: {0}</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="605"/>
+        <location filename="../ui/main_window.py" line="620"/>
         <source>Not RAW — will be set on capture</source>
         <translation>Není RAW — nastaví se při snímání</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="608"/>
+        <location filename="../ui/main_window.py" line="623"/>
         <source>not reported</source>
         <translation>neuvedeno</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="610"/>
+        <location filename="../ui/main_window.py" line="625"/>
         <source>not reported by the camera</source>
         <translation>fotoaparát neuvádí</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="629"/>
+        <location filename="../ui/main_window.py" line="644"/>
         <source>Saved: {0}</source>
         <translation>Uloženo: {0}</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="635"/>
+        <location filename="../ui/main_window.py" line="650"/>
         <source>measuring…</source>
         <translation>měřím…</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="644"/>
+        <location filename="../ui/main_window.py" line="659"/>
         <source>{0:.2f} % — saturated</source>
         <translation>{0:.2f} % — saturováno</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="678"/>
+        <location filename="../ui/main_window.py" line="694"/>
         <source>The settings could not be saved: {0}</source>
         <translation>Nastavení se nepodařilo uložit: {0}</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="680"/>
+        <location filename="../ui/main_window.py" line="696"/>
         <source>Images are saved to {0}</source>
         <translation>Snímky se ukládají do {0}</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="717"/>
+        <location filename="../ui/main_window.py" line="723"/>
+        <source>The live view runs at {0} (wide open, brighter). Captures use {1}.</source>
+        <translation>Živý náhled běží na {0} (otevřená clona, světlejší). Snímky se berou na {1}.</translation>
+    </message>
+    <message>
+        <location filename="../ui/main_window.py" line="737"/>
+        <source>The live view is very dark. It shows the exposure that is set ({0}, {1}), so a weak fluorescence stays black. Raise the ISO (800 to 6400) to see it, or focus under white light.</source>
+        <translation>Živý náhled je velmi tmavý. Ukazuje nastavenou expozici ({0}, {1}), takže slabá fluorescence zůstane černá. Zvyšte ISO (800 až 6400), abyste ji viděli, nebo ostřete při bílém světle.</translation>
+    </message>
+    <message>
+        <location filename="../ui/main_window.py" line="757"/>
         <source>camera magnifier {0}× · </source>
         <translation>lupa fotoaparátu {0}× · </translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="718"/>
+        <location filename="../ui/main_window.py" line="758"/>
         <source>live view · {0} × {1} · {2:.0f} fps</source>
         <translation>živý náhled · {0} × {1} · {2:.0f} fps</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="744"/>
+        <location filename="../ui/main_window.py" line="784"/>
         <source>Reconnecting · attempt {0}</source>
         <translation>Obnovuji spojení · pokus {0}</translation>
     </message>
     <message>
         <location filename="../runtime.py" line="220"/>
-        <location filename="../ui/main_window.py" line="746"/>
+        <location filename="../ui/main_window.py" line="786"/>
         <source>Connected</source>
         <translation>Připojeno</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="748"/>
+        <location filename="../ui/main_window.py" line="788"/>
         <source>Disconnected · retrying every 5 s</source>
         <translation>Odpojeno · zkouším znovu každých 5 s</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="750"/>
+        <location filename="../ui/main_window.py" line="790"/>
         <source>· live view {0:.1f} fps</source>
         <translation>· živý náhled {0:.1f} fps</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="755"/>
+        <location filename="../ui/main_window.py" line="795"/>
         <source>White light</source>
         <translation>Bílé světlo</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="755"/>
+        <location filename="../ui/main_window.py" line="795"/>
         <source>UV 70 %</source>
         <translation>UV 70 %</translation>
     </message>
     <message>
-        <location filename="../ui/main_window.py" line="755"/>
+        <location filename="../ui/main_window.py" line="795"/>
         <source>UV 100 %</source>
         <translation>UV 100 %</translation>
     </message>
@@ -1516,27 +1536,42 @@
         <translation>Nová složka platí pro to, co pořídíte od teď. Už existující složky se nepřesouvají; zkopírujte je, pokud je v novém místě potřebujete.</translation>
     </message>
     <message>
-        <location filename="../ui/settings_dialog.py" line="52"/>
+        <location filename="../ui/settings_dialog.py" line="49"/>
+        <source>Live view</source>
+        <translation>Živý náhled</translation>
+    </message>
+    <message>
+        <location filename="../ui/settings_dialog.py" line="50"/>
+        <source>Open the aperture for the live view (f/5.6 or the widest)</source>
+        <translation>Otevřít clonu pro živý náhled (f/5.6 nebo nejširší)</translation>
+    </message>
+    <message>
+        <location filename="../ui/settings_dialog.py" line="53"/>
+        <source>A wide aperture makes the live view brighter. Every capture, series and flat still uses the aperture you set for them.</source>
+        <translation>Otevřená clona zesvětlí živý náhled. Každý snímek, série i flat se přesto berou na cloně, kterou jste pro ně nastavili.</translation>
+    </message>
+    <message>
+        <location filename="../ui/settings_dialog.py" line="62"/>
         <source>Cancel</source>
         <translation>Zrušit</translation>
     </message>
     <message>
-        <location filename="../ui/settings_dialog.py" line="54"/>
+        <location filename="../ui/settings_dialog.py" line="64"/>
         <source>Save</source>
         <translation>Uložit</translation>
     </message>
     <message>
-        <location filename="../ui/settings_dialog.py" line="69"/>
+        <location filename="../ui/settings_dialog.py" line="79"/>
         <source>Choose the folder for images and calibration</source>
         <translation>Vyberte složku pro snímky a kalibraci</translation>
     </message>
     <message>
-        <location filename="../ui/settings_dialog.py" line="77"/>
+        <location filename="../ui/settings_dialog.py" line="87"/>
         <source>(default)</source>
         <translation>(výchozí)</translation>
     </message>
     <message>
-        <location filename="../ui/settings_dialog.py" line="79"/>
+        <location filename="../ui/settings_dialog.py" line="89"/>
         <source>Images: {0}
 Flat fields: {1}
 Free space on that disk: {2}</source>
@@ -1545,12 +1580,12 @@ Flat fieldy: {1}
 Volné místo na disku: {2}</translation>
     </message>
     <message>
-        <location filename="../ui/settings_dialog.py" line="84"/>
+        <location filename="../ui/settings_dialog.py" line="94"/>
         <source>Nothing can be written to this folder: {0}</source>
         <translation>Do této složky nelze zapisovat: {0}</translation>
     </message>
     <message>
-        <location filename="../ui/settings_dialog.py" line="86"/>
+        <location filename="../ui/settings_dialog.py" line="96"/>
         <source>This folder is synchronised to the cloud. Every raw frame is about 20 MB and a flat field set about 600 MB, so the synchronisation will be busy and may fill the cloud storage.</source>
         <translation>Tato složka se synchronizuje do cloudu. Každý snímek RAW má asi 20 MB a sada flat fieldu asi 600 MB, synchronizace bude hodně vytížená a může zaplnit úložiště v cloudu.</translation>
     </message>

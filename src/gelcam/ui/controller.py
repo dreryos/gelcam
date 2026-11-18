@@ -15,6 +15,8 @@ import numpy as np
 from PySide6.QtCore import QObject, Signal
 
 from ..camera import Camera, CameraError, CameraInfo, FocusStep, LensInfo, Prop
+from ..camera.base import check_allowed
+from ..camera.values import av_fnumber
 from ..acquisition.flat import analyze_flat
 from ..processing.exposure import measure
 from ..processing.focus import sharpness_rgb
@@ -35,9 +37,11 @@ class CameraController(QObject):
     reconnected = Signal(object)  # CameraInfo
     measured = Signal(object, object)  # Path, ExposureMeasurement
     flat_analyzed = Signal(object, object)  # Path, FlatStats
+    live_aperture_changed = Signal(object)  # (live view code, capture code) while the live view is wide open, else None
     status_ready = Signal(object)  # dict: Prop -> int | str (image quality, battery) and "lens" -> LensInfo
 
     MAGNIFIER_SETTLE = 0.6  # seconds the live view needs after the magnifier is switched
+    LIVE_VIEW_F_NUMBER = 5.6  # aperture of the live view; if the lens does not offer it, its widest one
 
     def __init__(self, camera_factory: Callable[[], Camera]) -> None:
         super().__init__()
@@ -50,6 +54,9 @@ class CameraController(QObject):
         self.lost = False
         self._live_before_loss = False
         self.lens = LensInfo()  # latest from refresh_options
+        self.live_aperture = True  # open the aperture for the live view (a brighter picture); captures keep theirs
+        self._capture_av: int | None = None  # the operator's aperture while the live view runs wide open
+        self._live_av: int | None = None  # the aperture the live view runs at
         self.zoom = 1  # live view magnifier the operator asked for (the camera may drop out of it on its own)
         self.camera_model = ""  # of the connected camera, for the metadata of calibration sets
         self.zooms: tuple[int, ...] = (1, 5, 10)  # magnifier steps of the connected camera (refresh_options)
@@ -161,6 +168,7 @@ class CameraController(QObject):
     def disconnect_camera(self) -> None:
         def do() -> None:
             if self._camera is not None:
+                self._restore_aperture(self._camera)
                 self._camera.disconnect()
             self._camera = None
             self.live = False
@@ -185,19 +193,33 @@ class CameraController(QObject):
             self.lens = status["lens"]
             status["zooms"] = self.zooms = tuple(getattr(cam, "live_view_zooms", (1, 5, 10)))
             self.status_ready.emit(status)
-            return {p: (cam.allowed_values(p), int(cam.get(p))) for p in (Prop.ISO, Prop.TV, Prop.AV)}
+            return {p: (cam.allowed_values(p), self._operator_value(cam, p)) for p in (Prop.ISO, Prop.TV, Prop.AV)}
 
         self._submit(do, self.options_ready.emit)
 
     def set_value(self, prop: Prop, code: int) -> None:
-        self._submit(lambda: self._cam().set(prop, code), lambda _: self.message.emit(self.tr("Set {0}.").format(prop.value)))
+        def do() -> None:
+            cam = self._cam()
+            if prop is Prop.AV and self._capture_av is not None:  # live view wide open: the choice is for the captures
+                check_allowed(cam, prop, code)
+                self._capture_av = code
+                self.live_aperture_changed.emit((self._live_av, code))
+                return
+            cam.set(prop, code)
+
+        self._submit(do, lambda _: self.message.emit(self.tr("Set {0}.").format(prop.value)))
 
     def set_live_view(self, on: bool) -> None:
         def do() -> None:
             if on == self.live:  # redundant request: true no-op
                 return
             cam = self._cam()
-            cam.start_live_view() if on else cam.stop_live_view()
+            if on:
+                cam.start_live_view()
+                self._open_aperture(cam)
+            else:
+                self._restore_aperture(cam)
+                cam.stop_live_view()
             self.live = on
 
         self._submit(do)
@@ -251,6 +273,51 @@ class CameraController(QObject):
 
         self._submit(do, done)
 
+    # --- aperture of the live view
+    def _widest_av(self, cam: Camera) -> int | None:
+        """f/5.6 if the camera offers it, otherwise the widest aperture it offers (the lowest f-number)."""
+        allowed = cam.allowed_values(Prop.AV)
+        if not allowed:
+            return None
+        wanted = [c for c in allowed if abs(av_fnumber(c) - self.LIVE_VIEW_F_NUMBER) < 0.05]
+        return wanted[0] if wanted else min(allowed, key=av_fnumber)
+
+    def _open_aperture(self, cam: Camera) -> None:
+        """Opens the aperture for the live view and remembers the operator's one (camera thread)."""
+        if not self.live_aperture:
+            return
+        try:
+            widest, current = self._widest_av(cam), int(cam.get(Prop.AV))
+            if widest is None:
+                return
+            if current != widest:
+                self._capture_av = current  # a value from the camera's own list is written (rule 4)
+                cam.set(Prop.AV, widest)
+            elif self._capture_av is None:
+                return  # already wide open and nothing to give back
+            self._live_av = widest
+            self.live_aperture_changed.emit((widest, self._capture_av))
+        except CameraError as exc:
+            self.message.emit(self.tr("Could not open the aperture for the live view: {0}").format(exc))
+
+    def _restore_aperture(self, cam: Camera) -> None:
+        """Gives the camera the operator's aperture back (camera thread)."""
+        if self._capture_av is None:
+            return
+        code, self._capture_av = self._capture_av, None
+        self._live_av = None
+        try:
+            cam.set(Prop.AV, code)
+        except CameraError as exc:
+            self.message.emit(self.tr("Could not restore the aperture: {0}").format(exc))
+        self.live_aperture_changed.emit(None)
+
+    def _operator_value(self, cam: Camera, prop: Prop) -> int:
+        """The value the operator has chosen: for the aperture, not the one the live view is opened to."""
+        if prop is Prop.AV and self._capture_av is not None:
+            return self._capture_av
+        return int(cam.get(prop))
+
     @staticmethod
     def _sharpness_now(cam: Camera, frames: int = 3) -> float | None:
         """Mean sharpness of a few fresh live view frames; None when none arrived."""
@@ -286,12 +353,25 @@ class CameraController(QObject):
 
     def capture(self, dest_dir: Path) -> None:
         self.message.emit(self.tr("Capturing…"))
-        self._submit(lambda: self._cam().capture(dest_dir), self.captured.emit)
+
+        def do() -> Path:
+            cam = self._cam()
+            opened = self._capture_av is not None
+            if opened:  # the exposure is taken at the operator's aperture, never at the live view's
+                self._restore_aperture(cam)
+            try:
+                return cam.capture(dest_dir)
+            finally:
+                if opened and self.live:
+                    self._open_aperture(cam)
+
+        self._submit(do, self.captured.emit)
 
     def shutdown(self) -> None:
         self._closed = True
         if self._camera is not None:
             try:
+                self._restore_aperture(self._camera)
                 self._camera.disconnect()
             except Exception:  # noqa: BLE001
                 pass

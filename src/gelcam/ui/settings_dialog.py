@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtWidgets import (
-    QDialog, QFileDialog, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
+    QCheckBox, QDialog, QFileDialog, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
 )
 
 from .. import settings as cfg
@@ -16,7 +16,7 @@ class SettingsDialog(QDialog):
     def __init__(self, current: cfg.Settings, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setWindowTitle(self.tr("Settings"))
-        self.resize(560, 360)
+        self.resize(560, 460)
         self._root: Path | None = current.root  # None = default
         lay = QVBoxLayout(self)
 
@@ -46,6 +46,16 @@ class SettingsDialog(QDialog):
         lay.addWidget(Note(self.tr(
             "The new folder applies to what you take from now on. Folders that already exist are not moved; "
             "copy them over if you need them in the new place.")))
+        live = Card(self.tr("Live view"))
+        self.live_aperture = QCheckBox(self.tr("Open the aperture for the live view (f/5.6 or the widest)"))
+        self.live_aperture.setChecked(current.live_view_aperture)
+        live.body.addWidget(self.live_aperture)
+        hint = QLabel(self.tr("A wide aperture makes the live view brighter. Every capture, series and flat still "
+                              "uses the aperture you set for them."))
+        hint.setProperty("role", "dim")
+        hint.setWordWrap(True)
+        live.body.addWidget(hint)
+        lay.addWidget(live)
         lay.addStretch()
 
         row = QHBoxLayout()
@@ -62,7 +72,7 @@ class SettingsDialog(QDialog):
 
     @property
     def result_settings(self) -> cfg.Settings:
-        return cfg.Settings(root=self._root)
+        return cfg.Settings(root=self._root, live_view_aperture=self.live_aperture.isChecked())
 
     def _choose(self) -> None:
         start = str(self._root or cfg.default_root())

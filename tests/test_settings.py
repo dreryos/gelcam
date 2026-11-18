@@ -124,3 +124,41 @@ def test_main_window_applies_the_new_root(app, appdata, tmp_path, monkeypatch):
         win._wizard.close()
         win.close()
         win.ctrl.shutdown()
+
+
+def test_live_view_aperture_setting_defaults_to_on_and_round_trips(appdata, tmp_path):
+    assert cfg.load().live_view_aperture is True
+    cfg.save(cfg.Settings(root=tmp_path / "x", live_view_aperture=False))
+    s = cfg.load()
+    assert s.live_view_aperture is False and s.root == tmp_path / "x"
+    (appdata / cfg.SETTINGS_NAME).write_text('{"root": null}', encoding="utf-8")  # an older file without the key
+    assert cfg.load().live_view_aperture is True
+    (appdata / cfg.SETTINGS_NAME).write_text('{"live_view_aperture": "no"}', encoding="utf-8")  # only a real false counts
+    assert cfg.load().live_view_aperture is True
+
+
+def test_dialog_and_window_carry_the_live_view_aperture_setting(app, appdata, tmp_path, monkeypatch):
+    from gelcam.camera import MockCamera
+    from gelcam.ui import settings_dialog
+    from gelcam.ui.controller import CameraController
+    from gelcam.ui.main_window import MainWindow
+    from gelcam.ui.settings_dialog import SettingsDialog
+
+    dlg = SettingsDialog(cfg.Settings(live_view_aperture=False))
+    assert not dlg.live_aperture.isChecked() and dlg.result_settings.live_view_aperture is False
+    dlg.live_aperture.setChecked(True)
+    assert dlg.result_settings.live_view_aperture is True
+
+    cfg.save(cfg.Settings(live_view_aperture=False))
+    win = MainWindow(CameraController(lambda: MockCamera(seed=1)))
+    assert win.ctrl.live_aperture is False  # the saved choice reaches the controller at start
+
+    def fake_exec(self) -> int:
+        self.live_aperture.setChecked(True)
+        return 1
+
+    monkeypatch.setattr(settings_dialog.SettingsDialog, "exec", fake_exec)
+    win._open_settings()
+    assert win.ctrl.live_aperture is True and cfg.load().live_view_aperture is True
+    win.close()
+    win.ctrl.shutdown()

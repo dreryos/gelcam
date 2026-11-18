@@ -209,3 +209,36 @@ def test_histogram_can_be_switched_off_and_is_then_not_computed(app, tmp_path):
     win.btn_hist.setChecked(True)
     assert not win.hist.isHidden() and len(calls) > before  # switching on draws it at once
     win.close()
+
+
+def test_a_black_live_view_explains_itself_and_the_hint_goes_away(app, tmp_path):
+    win, _cams = _window(tmp_path)
+    win.show()
+    assert _wait(app, lambda: win._frame is not None)
+    win.ctrl.set_live_view(False)  # no real frames while the test feeds its own
+    app.processEvents()
+    dark = np.zeros((480, 720, 3), np.uint8)
+    for _ in range(12):  # about four statistics updates
+        win._on_frame(dark)
+    assert not win.dark_note.isHidden() and "ISO" in win.dark_note.text() and "very dark" in win.dark_note.text()
+    bright = np.full((480, 720, 3), 120, np.uint8)
+    for _ in range(4):
+        win._on_frame(bright)
+    assert win.dark_note.isHidden()
+    for _ in range(3):  # a short dark moment (a hand over the target) does not flash the hint
+        win._on_frame(dark)
+    assert win.dark_note.isHidden()
+    win.close()
+
+
+def test_the_window_says_when_the_live_view_runs_at_another_aperture(app, tmp_path):
+    win, _cams = _window(tmp_path)
+    win.show()
+    assert win.lbl_live_av.isHidden()
+    win._on_live_aperture((0x28, 0x30))  # live view code, capture code
+    assert not win.lbl_live_av.isHidden()
+    text = win.lbl_live_av.text()
+    assert "live view runs at" in text and "Captures use" in text and text.count("f/") == 2
+    win._on_live_aperture(None)
+    assert win.lbl_live_av.isHidden()
+    win.close()

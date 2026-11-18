@@ -45,6 +45,8 @@ from .widgets import Card, HistogramView, Note, PreviewView, StatValue
 _LABELS = {Prop.ISO: values.iso_label, Prop.TV: values.tv_label, Prop.AV: values.av_label}
 _CHANNELS = "RGB"
 _STATS_EVERY = 3  # histogram and sharpness only on every 3rd frame (GELCAM_PLAN.md, ch. 8)
+_DARK_MEAN = 6.0  # mean of the live view (0-255) below which it is "black" for the operator
+_DARK_UPDATES = 3  # consecutive statistics updates (about a second) before the hint appears
 _CHIP = (f"background: {theme.PANEL}; border: 1px solid {theme.LINE}; border-radius: 12px;"
          " padding: 3px 10px;")
 
@@ -94,6 +96,7 @@ class MainWindow(QMainWindow):
         self.ctrl = controller
         self.settings = cfg.load()
         self.out_dir = self.settings.images_dir
+        controller.live_aperture = self.settings.live_view_aperture
         self.light = "white"
         self._options_updating = False
         self._frame: np.ndarray | None = None
@@ -130,6 +133,7 @@ class MainWindow(QMainWindow):
         c.connect_failed.connect(self._on_connect_failed)
         c.options_ready.connect(self._on_options)
         c.status_ready.connect(self._on_status)
+        c.live_aperture_changed.connect(self._on_live_aperture)
         c.frame_ready.connect(self._on_frame)
         c.captured.connect(self._on_captured)
         c.measured.connect(self._on_measured)
@@ -225,8 +229,14 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(live_page)
         self.stack.addWidget(self.nocam_page)
 
+        # The live view shows the exposure that is set, so a weak fluorescence is black at e.g. ISO 100, 1/30 s
+        # and the operator sees "nothing". Say why and what to do.
+        self.dark_note = Note("")
+        self.dark_note.hide()
+        self._dark_updates = 0
         left = QVBoxLayout()
         left.addLayout(tools)
+        left.addWidget(self.dark_note)
         left.addWidget(self.stack, 1)
         left.addWidget(self._build_display_card())
         return left
@@ -412,6 +422,11 @@ class MainWindow(QMainWindow):
         hint.setProperty("role", "dim")
         exp.body.addLayout(eform)
         exp.body.addWidget(hint)
+        self.lbl_live_av = QLabel()  # shown while the live view runs at another aperture than the captures
+        self.lbl_live_av.setProperty("role", "dim")
+        self.lbl_live_av.setWordWrap(True)
+        self.lbl_live_av.hide()
+        exp.body.addWidget(self.lbl_live_av)
 
         single = Card(self.tr("Single frame"))
         self.btn_capture = QPushButton(self.tr("Capture frame"))
@@ -672,6 +687,7 @@ class MainWindow(QMainWindow):
         dlg = SettingsDialog(self.settings, self)
         if dlg.exec():
             self.settings = dlg.result_settings
+            self.ctrl.live_aperture = self.settings.live_view_aperture
             try:
                 cfg.save(self.settings)
             except OSError as exc:
@@ -695,8 +711,32 @@ class MainWindow(QMainWindow):
         stats = self._frame_n % _STATS_EVERY == 1
         if stats:
             self.lbl_sharp.setText(f"{sharpness_rgb(frame):.1f}")
+            self._update_dark_hint(float(frame[::4, ::4].mean()))
             self._update_status()
         self._render(stats=stats)
+
+    def _on_live_aperture(self, info: object) -> None:
+        if info is None:
+            self.lbl_live_av.hide()
+            return
+        live, capture = info  # type: ignore[misc]
+        self.lbl_live_av.setText(self.tr("The live view runs at {0} (wide open, brighter). Captures use {1}.").format(
+            values.av_label(live), values.av_label(capture)))
+        self.lbl_live_av.show()
+
+    def _update_dark_hint(self, mean: float) -> None:
+        if mean >= _DARK_MEAN:
+            self._dark_updates = 0
+            self.dark_note.hide()
+            return
+        self._dark_updates += 1
+        if self._dark_updates >= _DARK_UPDATES:
+            iso = self.combos[Prop.ISO].currentText() or "-"
+            tv = self.combos[Prop.TV].currentText() or "-"
+            self.dark_note.setText(self.tr(
+                "The live view is very dark. It shows the exposure that is set ({0}, {1}), so a weak fluorescence "
+                "stays black. Raise the ISO (800 to 6400) to see it, or focus under white light.").format(iso, tv))
+            self.dark_note.show()
 
     def _fps(self) -> float:
         t = self._frame_times

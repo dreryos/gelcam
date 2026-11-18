@@ -29,6 +29,7 @@ def default_root() -> Path:
 @dataclass(frozen=True)
 class Settings:
     root: Path | None = None  # None = the default root
+    live_view_aperture: bool = True  # open the aperture for the live view (f/5.6 or the widest); captures keep theirs
 
     @property
     def effective_root(self) -> Path:
@@ -52,7 +53,8 @@ def load() -> Settings:
     try:
         data = json.loads(settings_path().read_text(encoding="utf-8"))
         root = data.get("root")
-        return Settings(root=Path(root) if isinstance(root, str) and root.strip() else None)
+        return Settings(root=Path(root) if isinstance(root, str) and root.strip() else None,
+                        live_view_aperture=data.get("live_view_aperture", True) is not False)
     except (OSError, ValueError, AttributeError):
         return Settings()
 
@@ -60,7 +62,8 @@ def load() -> Settings:
 def save(settings: Settings) -> Path:
     """Writes the settings atomically."""
     target = settings_path()
-    data = {"root": str(settings.root) if settings.root else None}
+    data = {"root": str(settings.root) if settings.root else None,
+            "live_view_aperture": settings.live_view_aperture}
     fd, tmp = tempfile.mkstemp(dir=target.parent, prefix=".settings-", suffix=".tmp")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
