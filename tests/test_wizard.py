@@ -425,3 +425,19 @@ def test_blur_warning_from_measured_sharpness(monkeypatch, env):  # monkeypatch 
     meta = wiz._metadata()
     assert meta["focus"]["autofocus_locked"] is False
     assert len(meta["focus"]["light_frame_sharpness"]) == 4 and len(meta["focus"]["test_frame_sharpness"]) == 1
+
+
+def test_focus_step_starts_with_the_bright_live_view_and_gives_it_back(env):
+    app, ctrl, _cam, wiz, _sent, _root = env
+    assert ctrl.live_iso is False and not wiz.btn_bright.isChecked()
+    wiz.gel_name.setText("bright")
+    wiz.btn_next.click()
+    wiz.btn_next.click()  # -> step 3: a black picture cannot be focused
+    assert _wait(app, lambda: ctrl.live_iso is True)
+    assert wiz.btn_bright.isChecked()
+    wiz.btn_bright.click()  # the operator can switch it off again
+    assert _wait(app, lambda: ctrl.live_iso is False) and not wiz.btn_bright.isChecked()
+    wiz.btn_bright.click()
+    assert _wait(app, lambda: ctrl.live_iso is True)
+    wiz.reject()  # whatever the wizard did, the controller is given back the state it had at the start
+    assert _wait(app, lambda: ctrl.live_iso is False)

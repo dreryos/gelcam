@@ -133,7 +133,8 @@ class MainWindow(QMainWindow):
         c.connect_failed.connect(self._on_connect_failed)
         c.options_ready.connect(self._on_options)
         c.status_ready.connect(self._on_status)
-        c.live_aperture_changed.connect(self._on_live_aperture)
+        c.live_boost_changed.connect(self._on_live_boost)
+        c.live_iso_flag_changed.connect(self._sync_bright_button)
         c.frame_ready.connect(self._on_frame)
         c.captured.connect(self._on_captured)
         c.measured.connect(self._on_measured)
@@ -392,6 +393,10 @@ class MainWindow(QMainWindow):
         self.btn_af = QPushButton(self.tr("Run autofocus"))
         self.btn_af.setProperty("primary", True)
         self.btn_af.clicked.connect(self.ctrl.autofocus)
+        self.btn_bright = QPushButton(self.tr("Bright live view"))
+        self.btn_bright.setCheckable(True)
+        self.btn_bright.setToolTip(self.tr("Raises the ISO for the live view only (to ISO 6400), so that a weak light or fluorescence can be seen and focused. Every capture, series and flat keeps your own ISO."))
+        self.btn_bright.toggled.connect(self.ctrl.set_live_iso)
         steps = QHBoxLayout()
         self.focus_btns = {s: theme.icon_button(QPushButton(glyph), name) for s, glyph, name in [
             (FocusStep.NEAR_3, "≪≪", self.tr("Focus nearer, large step")),
@@ -403,7 +408,7 @@ class MainWindow(QMainWindow):
         for step, b in self.focus_btns.items():
             b.clicked.connect(lambda _=False, s=step: self.ctrl.focus_step(s))
             steps.addWidget(b)
-        for w in (self.lbl_sharp, sharp_hint, self.btn_af, QLabel(self.tr("Fine steps (near ← → far)"))):
+        for w in (self.lbl_sharp, sharp_hint, self.btn_af, self.btn_bright, QLabel(self.tr("Fine steps (near ← → far)"))):
             self.focus_card.body.addWidget(w)
         self.focus_card.body.addLayout(steps)
         self.focus_card.body.addWidget(Note(self.tr(
@@ -422,11 +427,11 @@ class MainWindow(QMainWindow):
         hint.setProperty("role", "dim")
         exp.body.addLayout(eform)
         exp.body.addWidget(hint)
-        self.lbl_live_av = QLabel()  # shown while the live view runs at another aperture than the captures
-        self.lbl_live_av.setProperty("role", "dim")
-        self.lbl_live_av.setWordWrap(True)
-        self.lbl_live_av.hide()
-        exp.body.addWidget(self.lbl_live_av)
+        self.lbl_live_boost = QLabel()  # shown while the live view runs with other values than the captures
+        self.lbl_live_boost.setProperty("role", "dim")
+        self.lbl_live_boost.setWordWrap(True)
+        self.lbl_live_boost.hide()
+        exp.body.addWidget(self.lbl_live_boost)
 
         single = Card(self.tr("Single frame"))
         self.btn_capture = QPushButton(self.tr("Capture frame"))
@@ -687,7 +692,7 @@ class MainWindow(QMainWindow):
         dlg = SettingsDialog(self.settings, self)
         if dlg.exec():
             self.settings = dlg.result_settings
-            self.ctrl.live_aperture = self.settings.live_view_aperture
+            self.ctrl.set_live_aperture(self.settings.live_view_aperture)
             try:
                 cfg.save(self.settings)
             except OSError as exc:
@@ -715,14 +720,23 @@ class MainWindow(QMainWindow):
             self._update_status()
         self._render(stats=stats)
 
-    def _on_live_aperture(self, info: object) -> None:
-        if info is None:
-            self.lbl_live_av.hide()
+    def _on_live_boost(self, info: object) -> None:
+        """Says so while the live view runs with other values than the captures (wide aperture, bright ISO)."""
+        if not info:
+            self.lbl_live_boost.hide()
             return
-        live, capture = info  # type: ignore[misc]
-        self.lbl_live_av.setText(self.tr("The live view runs at {0} (wide open, brighter). Captures use {1}.").format(
-            values.av_label(live), values.av_label(capture)))
-        self.lbl_live_av.show()
+        shown = {Prop.ISO: values.iso_label, Prop.AV: values.av_label}
+        order = [p for p in (Prop.ISO, Prop.AV) if p in info]  # type: ignore[operator]
+        live = ", ".join(shown[p](info[p][0]) for p in order)  # type: ignore[index]
+        capture = ", ".join(shown[p](info[p][1]) for p in order)  # type: ignore[index]
+        self.lbl_live_boost.setText(self.tr("The live view runs at {0} (brighter). Captures use {1}.").format(live, capture))
+        self.lbl_live_boost.show()
+
+    def _sync_bright_button(self, on: bool) -> None:
+        """Another window (the wizard) switched the bright live view: the button follows without sending it again."""
+        self.btn_bright.blockSignals(True)
+        self.btn_bright.setChecked(on)
+        self.btn_bright.blockSignals(False)
 
     def _update_dark_hint(self, mean: float) -> None:
         if mean >= _DARK_MEAN:
@@ -735,7 +749,8 @@ class MainWindow(QMainWindow):
             tv = self.combos[Prop.TV].currentText() or "-"
             self.dark_note.setText(self.tr(
                 "The live view is very dark. It shows the exposure that is set ({0}, {1}), so a weak fluorescence "
-                "stays black. Raise the ISO (800 to 6400) to see it, or focus under white light.").format(iso, tv))
+                "stays black. Switch on \"Bright live view\" in the Focus card, raise the ISO (800 to 6400), or focus "
+                "under white light.").format(iso, tv))
             self.dark_note.show()
 
     def _fps(self) -> float:
@@ -795,7 +810,7 @@ class MainWindow(QMainWindow):
         return {"white": self.tr("White light"), "uv70": self.tr("UV 70 %"), "uv100": self.tr("UV 100 %")}
 
     def _set_enabled(self, on: bool) -> None:
-        for w in [self.btn_new, self.btn_capture, self.btn_af, *self.focus_btns.values(),
+        for w in [self.btn_new, self.btn_capture, self.btn_af, self.btn_bright, *self.focus_btns.values(),
                   *self.combos.values(), *self.zoom_btns.values()]:
             w.setEnabled(on)
 

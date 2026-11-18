@@ -100,6 +100,7 @@ class GelWizard(QDialog):
         self._box_btns: tuple[QAbstractButton, QAbstractButton] | None = None
         self._test_dir: Path | None = None
         self._live_at_open = controller.live
+        self._bright_at_open = controller.live_iso  # given back when the wizard closes
         self._closed = False
         self._processing = False
         self._proc_out: object = None  # worker result, readable even if the dialog closes first
@@ -129,6 +130,7 @@ class GelWizard(QDialog):
             (self.ctrl.captured, self._on_captured), (self.ctrl.measured, self._on_measured),
             (self.ctrl.error, self._on_error), (self.ctrl.connection_lost, self._on_lost),
             (self.ctrl.reconnected, self._on_reconnected), (self.ctrl.busy_changed, self._on_busy),
+            (self.ctrl.live_iso_flag_changed, self._sync_bright),
         ]
         for sig, slot in self._wiring:
             sig.connect(slot)
@@ -374,6 +376,10 @@ class GelWizard(QDialog):
         card = Card(self.tr("Focus"))
         self.btn_af = self._btn(self.tr("Run autofocus"), primary=True, slot=self._run_af)
         card.body.addWidget(self.btn_af)
+        self.btn_bright = self._btn(self.tr("Bright live view"), checkable=True, slot=self._bright_clicked)
+        self.btn_bright.setToolTip(self.tr("Raises the ISO for the live view only (to ISO 6400), so that a weak light or fluorescence can be seen and focused. Every capture, series and flat keeps your own ISO."))
+        self.btn_bright.setChecked(self.ctrl.live_iso)
+        card.body.addWidget(self.btn_bright)
         card.body.addWidget(QLabel(self.tr("Fine steps")))
         row = QHBoxLayout()
         for glyph, name, step in (
@@ -409,6 +415,14 @@ class GelWizard(QDialog):
         lay.addLayout(col, 2)
         self._set_mag(1, send=False)
         return w
+
+    def _bright_clicked(self) -> None:
+        self.ctrl.set_live_iso(self.btn_bright.isChecked())
+
+    def _sync_bright(self, on: bool) -> None:
+        self.btn_bright.blockSignals(True)
+        self.btn_bright.setChecked(on)
+        self.btn_bright.blockSignals(False)
 
     def _apply_zooms(self) -> None:
         """Offer only the magnifier steps the camera really has; focusing starts in the normal (1x) view.
@@ -1030,6 +1044,8 @@ class GelWizard(QDialog):
             self.ctrl.set_live_view(False)
         if i == 2 and old != 2:
             self._apply_zooms()
+            if not self.ctrl.live_iso:  # a black picture cannot be focused: start with the bright live view
+                self.ctrl.set_live_iso(True)
         self._timer.start() if live else self._timer.stop()
         self.stack.setCurrentIndex(i)
         if i == 0:
@@ -1372,6 +1388,7 @@ class GelWizard(QDialog):
                     pass
             if self.idx == 2:
                 self.ctrl.set_zoom(1)
+            self.ctrl.set_live_iso(self._bright_at_open)
             if self._live_at_open:  # FIFO on the camera thread: runs after any queued stop
                 self.ctrl.set_live_view(True)
         super().done(result)

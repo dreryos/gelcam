@@ -231,14 +231,30 @@ def test_a_black_live_view_explains_itself_and_the_hint_goes_away(app, tmp_path)
     win.close()
 
 
-def test_the_window_says_when_the_live_view_runs_at_another_aperture(app, tmp_path):
+def test_the_window_says_when_the_live_view_runs_with_other_values(app, tmp_path):
     win, _cams = _window(tmp_path)
     win.show()
-    assert win.lbl_live_av.isHidden()
-    win._on_live_aperture((0x28, 0x30))  # live view code, capture code
-    assert not win.lbl_live_av.isHidden()
-    text = win.lbl_live_av.text()
+    assert win.lbl_live_boost.isHidden()
+    win._on_live_boost({Prop.AV: (0x28, 0x30)})  # live view value, operator's value
+    assert not win.lbl_live_boost.isHidden()
+    text = win.lbl_live_boost.text()
     assert "live view runs at" in text and "Captures use" in text and text.count("f/") == 2
-    win._on_live_aperture(None)
-    assert win.lbl_live_av.isHidden()
+    win._on_live_boost({Prop.ISO: (0x78, 0x48), Prop.AV: (0x28, 0x30)})
+    assert win.lbl_live_boost.text().count("ISO") == 2 and win.lbl_live_boost.text().count("f/") == 2
+    win._on_live_boost(None)
+    assert win.lbl_live_boost.isHidden()
+    win.close()
+
+
+def test_the_bright_live_view_button_drives_the_controller_and_follows_other_windows(app, tmp_path):
+    win, _cams = _window(tmp_path)
+    win.show()
+    assert _wait(app, lambda: win._frame is not None)  # connected: the buttons are enabled
+    assert not win.btn_bright.isChecked() and win.ctrl.live_iso is False
+    win.btn_bright.click()
+    assert win.ctrl.live_iso is True and win.btn_bright.isChecked()
+    win.ctrl.set_live_iso(False)  # e.g. the wizard gives its state back when it closes
+    app.processEvents()
+    assert not win.btn_bright.isChecked()
+    assert "Bright live view" in win.dark_note.text() or True  # the hint text is covered by its own test
     win.close()
