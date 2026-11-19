@@ -121,12 +121,12 @@ def test_main_window_options_are_saved_and_used(app, tmp_path, monkeypatch):
 
     cfg.save(cfg.Settings(root=tmp_path / "root"))
     win = MainWindow(CameraController(lambda: MockCamera(seed=1)))
-    assert win.chk_tiff.isChecked() and not win.chk_inverted.isChecked()
+    assert win.btn_fmt_tiff.isChecked() and not win.btn_fmt_cr2.isChecked() and not win.chk_inverted.isChecked()
     win.chk_inverted.setChecked(True)
     assert cfg.load().frame_tiff_inverted is True and cfg.load().root == tmp_path / "root"
-    win.chk_tiff.setChecked(False)
+    win.btn_fmt_cr2.click()
     assert not win.chk_inverted.isEnabled() and cfg.load().frame_tiff is False
-    win.chk_tiff.setChecked(True)
+    win.btn_fmt_tiff.click()
 
     cam = MockCamera(seed=1)
     cam.connect()
@@ -135,4 +135,30 @@ def test_main_window_options_are_saved_and_used(app, tmp_path, monkeypatch):
     win._on_captured(raw)
     tif = raw.with_name(raw.stem + "_inverted.tif")
     assert _wait(app, lambda: tif.exists() and tif.name in win.lbl_file.text())
+    assert _wait(app, lambda: not raw.exists())  # TIFF chosen: the RAW file goes once the TIFF is written
+    # CR2 chosen: only the RAW file is kept
+    win.btn_fmt_cr2.click()
+    raw2 = cam.capture(tmp_path / "root" / "images")
+    win._awaiting_capture = True
+    win._on_captured(raw2)
+    time.sleep(0.3)
+    app.processEvents()
+    assert raw2.exists() and not raw2.with_suffix(".tif").exists() and not raw2.with_name(raw2.stem + "_inverted.tif").exists()
     win.ctrl.shutdown()
+
+
+def test_delete_raw_only_after_the_tiff_is_written(app, tmp_path):
+    pytest.importorskip("tifffile")
+    from gelcam.camera import MockCamera
+    from gelcam.ui.controller import CameraController
+
+    cam = MockCamera(seed=1)
+    cam.connect()
+    raw = cam.capture(tmp_path)
+    (tmp_path / (raw.stem + ".tif")).write_bytes(b"existing")  # the TIFF cannot be written: the RAW must stay
+    ctrl = CameraController(lambda: cam)
+    errors = []
+    ctrl.error.connect(errors.append)
+    ctrl.export_tiff(raw, "G", False, delete_raw=True)
+    assert _wait(app, lambda: errors) and raw.exists()
+    ctrl.shutdown()

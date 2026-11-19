@@ -27,8 +27,9 @@ Before taking images
   switch is in Settings... ("Live view").
 - Live view under UV: it shows the exposure that is set, so a weak light is black. Switch on "Bright live view" in the
   Focus card (ISO 6400 for the live view only; captures keep your ISO; the wizard does it by itself in the focus step); focusing under white light is easier and the focus holds when you switch to UV.
-- Single frame: next to the RAW file a black-and-white TIFF of the selected channel is saved (tick "Inverted" for dark
-  bands on white). The RAW is always kept; measure on the non-inverted TIFF or the RAW.
+- Single frame: the CR2 / TIFF switch chooses the file (default TIFF = black-and-white, selected channel; the CR2 is
+  deleted once the TIFF is written). Tick "Inverted TIFF" for dark bands on white. Measure on the non-inverted TIFF
+  or on a CR2; series in the wizard are always RAW.
 - Cabinet: the focus step needs a high-contrast target in the centre of the image.
 - Dark frames: lights off, cabinet closed, eyepiece covered.
 - The camera is set to RAW automatically before capture.

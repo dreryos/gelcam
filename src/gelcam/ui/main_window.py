@@ -440,15 +440,27 @@ class MainWindow(QMainWindow):
         self.btn_capture = QPushButton(self.tr("Capture frame"))
         self.btn_capture.setProperty("primary", True)
         self.btn_capture.clicked.connect(self._capture)
-        self.chk_tiff = QCheckBox(self.tr("Also save a B&W TIFF"))
-        self.chk_tiff.setToolTip(self.tr("One TIFF of the selected channel (R, G or B), next to the RAW file. "
-                                         "The RAW frame is always kept and never changed."))
-        self.chk_tiff.setChecked(self.settings.frame_tiff)
-        self.chk_inverted = QCheckBox(self.tr("Inverted (dark on white)"))
+        # two-position switch: the file the single frame is saved as (a series in the wizard is always RAW)
+        self.btn_fmt_cr2 = QPushButton("CR2")
+        self.btn_fmt_tiff = QPushButton("TIFF")
+        self.btn_fmt_cr2.setToolTip(self.tr("Save the RAW file as it comes from the camera."))
+        self.btn_fmt_tiff.setToolTip(self.tr("Save a black-and-white TIFF of the selected channel (R, G or B) instead of "
+                                             "the RAW file. The RAW file is deleted once the TIFF is written."))
+        fmt_group = QButtonGroup(self)
+        fmt_row = QHBoxLayout()
+        fmt_row.setSpacing(0)
+        for b in (self.btn_fmt_cr2, self.btn_fmt_tiff):
+            b.setCheckable(True)
+            fmt_group.addButton(b)
+            fmt_row.addWidget(b)
+        fmt_group.setExclusive(True)
+        (self.btn_fmt_tiff if self.settings.frame_tiff else self.btn_fmt_cr2).setChecked(True)
+        self.chk_tiff = self.btn_fmt_tiff  # checked = TIFF, unchecked = CR2
+        self.chk_inverted = QCheckBox(self.tr("Inverted TIFF (dark on white)"))
         self.chk_inverted.setToolTip(self.tr("For looking at and for reports. Measure on the non-inverted TIFF or the RAW."))
         self.chk_inverted.setChecked(self.settings.frame_tiff_inverted)
         self.chk_inverted.setEnabled(self.settings.frame_tiff)
-        self.chk_tiff.toggled.connect(self._tiff_options_changed)
+        self.btn_fmt_tiff.toggled.connect(self._tiff_options_changed)
         self.chk_inverted.toggled.connect(self._tiff_options_changed)
         self.lbl_file = QLabel("–")
         self.lbl_file.setProperty("role", "dim")
@@ -459,7 +471,9 @@ class MainWindow(QMainWindow):
         stats.addWidget(self.stat_sat)
         measured = QLabel(self.tr("measured on RAW"))
         measured.setProperty("role", "dim")
-        for w in (self.btn_capture, self.chk_tiff, self.chk_inverted, self.lbl_file):
+        single.body.addWidget(self.btn_capture)
+        single.body.addLayout(fmt_row)
+        for w in (self.chk_inverted, self.lbl_file):
             single.body.addWidget(w)
         single.body.addLayout(stats)
         single.body.addWidget(measured)
@@ -669,7 +683,7 @@ class MainWindow(QMainWindow):
         self.stat_sat.set_value("…")
         self.ctrl.measure_file(path, _CHANNELS[self._channel()])
         if self.chk_tiff.isChecked():
-            self.ctrl.export_tiff(path, _CHANNELS[self._channel()], self.chk_inverted.isChecked())
+            self.ctrl.export_tiff(path, _CHANNELS[self._channel()], self.chk_inverted.isChecked(), delete_raw=True)
 
     def _tiff_options_changed(self) -> None:
         self.chk_inverted.setEnabled(self.chk_tiff.isChecked())

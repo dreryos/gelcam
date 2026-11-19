@@ -157,8 +157,11 @@ class CameraController(QObject):
 
         self._measure_pool.submit(job)
 
-    def export_tiff(self, path: Path, channel: str, inverted: bool) -> None:
-        """Black-and-white TIFF of one channel of a captured frame next to it, off the camera thread."""
+    def export_tiff(self, path: Path, channel: str, inverted: bool, delete_raw: bool = False) -> None:
+        """Black-and-white TIFF of one channel of a captured frame next to it, off the camera thread.
+
+        With `delete_raw` the RAW file is removed once the TIFF is on disk (the operator chose TIFF instead of CR2).
+        """
 
         if self._closed:
             return
@@ -167,6 +170,8 @@ class CameraController(QObject):
             try:
                 dest = path.with_name(frame_tiff_name(path, inverted))
                 write_frame_tiff(dest, read_frame(path), channel, inverted, source=path.name)
+                if delete_raw and dest.is_file() and dest.stat().st_size > 0:
+                    path.unlink(missing_ok=True)
                 self.tiff_exported.emit(path, dest)
             except Exception as exc:  # noqa: BLE001 - shown to the operator
                 self.error.emit(self.tr("Could not save the TIFF of {0}: {1}").format(path.name, exc))

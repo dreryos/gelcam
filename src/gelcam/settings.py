@@ -30,7 +30,7 @@ def default_root() -> Path:
 class Settings:
     root: Path | None = None  # None = the default root
     live_view_aperture: bool = True  # open the aperture for the live view (f/5.6 or the widest); captures keep theirs
-    frame_tiff: bool = True  # a single frame is also saved as a black-and-white TIFF
+    frame_tiff: bool = True  # True: a single frame is saved as a black-and-white TIFF instead of the CR2 (the CR2 is deleted afterwards)
     frame_tiff_inverted: bool = False  # ... inverted (dark bands on a white background)
 
     @property
